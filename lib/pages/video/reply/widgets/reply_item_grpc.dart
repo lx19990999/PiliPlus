@@ -437,9 +437,7 @@ class ReplyItemGrpc extends StatelessWidget {
               ),
             ),
           ),
-        const Spacer(),
         ZanButtonGrpc(replyItem: replyItem),
-        const SizedBox(width: 5),
       ],
     );
   }
