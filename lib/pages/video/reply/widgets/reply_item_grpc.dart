@@ -341,61 +341,37 @@ class ReplyItemGrpc extends StatelessWidget {
   ) {
     final ButtonStyle style = TextButton.styleFrom(
       padding: EdgeInsets.zero,
+      minimumSize: Size.zero,
       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       visualDensity: VisualDensity.compact,
     );
     return Row(
+      mainAxisAlignment: MainAxisAlignment.start,
       children: <Widget>[
         const SizedBox(width: 36),
-        SizedBox(
-          height: 32,
-          child: TextButton(
-            style: style,
-            onPressed: () {
-              feedBack();
-              onReply?.call(replyItem);
-            },
-            child: Row(
-              children: [
-                Icon(
-                  Icons.reply,
-                  size: 18,
-                  color: theme.colorScheme.outline.withValues(alpha: 0.8),
-                ),
-                const SizedBox(width: 3),
-                Text(
-                  '回复',
-                  style: TextStyle(
-                    fontSize: theme.textTheme.labelMedium!.fontSize,
-                    color: theme.colorScheme.outline,
-                  ),
-                ),
-              ],
-            ),
+        TextButton(
+          style: style,
+          onPressed: () {
+            feedBack();
+            onReply?.call(replyItem);
+          },
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.reply,
+                size: 18,
+                color: replyItem.replyControl.upLike
+                    ? theme.colorScheme.error
+                    : theme.colorScheme.outline.withValues(alpha: 0.8),
+              ),
+              const SizedBox(width: 3),
+            ],
           ),
         ),
-        const SizedBox(width: 2),
-        if (replyItem.replyControl.upLike) ...[
-          SizedBox(
-            height: 32,
-            child: TextButton(
-              onPressed: null,
-              style: style,
-              child: Text(
-                'UP主觉得很赞',
-                style: TextStyle(
-                  color: theme.colorScheme.secondary,
-                  fontSize: theme.textTheme.labelMedium!.fontSize,
-                  fontWeight: FontWeight.normal,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 2),
-        ],
         if (replyItem.replyControl.cardLabels
             .map((item) => item.textContent)
-            .contains('热评'))
+            .contains('热评')) ...[
           Text(
             '热评',
             style: TextStyle(
@@ -403,37 +379,32 @@ class ReplyItemGrpc extends StatelessWidget {
               fontSize: theme.textTheme.labelMedium!.fontSize,
             ),
           ),
+        ],
         if (replyLevel == 2 && needDivider && replyItem.id != replyItem.dialog)
-          SizedBox(
-            height: 32,
-            child: TextButton(
-              onPressed: showDialogue,
-              style: style,
-              child: Text(
-                '查看对话',
-                style: TextStyle(
-                  color: theme.colorScheme.outline,
-                  fontSize: theme.textTheme.labelMedium!.fontSize,
-                  fontWeight: FontWeight.normal,
-                ),
+          TextButton(
+            onPressed: showDialogue,
+            style: style,
+            child: Text(
+              '查看对话',
+              style: TextStyle(
+                color: theme.colorScheme.outline,
+                fontSize: theme.textTheme.labelMedium!.fontSize,
+                fontWeight: FontWeight.normal,
               ),
             ),
           )
         else if (replyLevel == 3 &&
             needDivider &&
             replyItem.parent != replyItem.root)
-          SizedBox(
-            height: 32,
-            child: TextButton(
-              onPressed: jumpToDialogue,
-              style: style,
-              child: Text(
-                '跳转回复',
-                style: TextStyle(
-                  color: theme.colorScheme.outline,
-                  fontSize: theme.textTheme.labelMedium!.fontSize,
-                  fontWeight: FontWeight.normal,
-                ),
+          TextButton(
+            onPressed: jumpToDialogue,
+            style: style,
+            child: Text(
+              '跳转回复',
+              style: TextStyle(
+                color: theme.colorScheme.outline,
+                fontSize: theme.textTheme.labelMedium!.fontSize,
+                fontWeight: FontWeight.normal,
               ),
             ),
           ),
