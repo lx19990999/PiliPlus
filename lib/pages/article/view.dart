@@ -511,14 +511,14 @@ class _ArticlePageState extends CommonDynPageState<ArticlePage> {
             required String text,
             required DynamicStat? stat,
             required VoidCallback onPressed,
-            IconData? activitedIcon,
+            IconData? activatedIcon,
           }) {
             final status = stat?.status == true;
             final color = status ? primary : outline;
             return TextButton.icon(
               onPressed: onPressed,
               icon: Icon(
-                status ? activitedIcon : icon,
+                status ? activatedIcon : icon,
                 size: 16,
                 color: color,
               ),
@@ -620,14 +620,14 @@ class _ArticlePageState extends CommonDynPageState<ArticlePage> {
                       ),
                       textIconButton(
                         icon: FontAwesomeIcons.star,
-                        activitedIcon: FontAwesomeIcons.solidStar,
+                        activatedIcon: FontAwesomeIcons.solidStar,
                         text: '收藏',
                         stat: stats.favorite,
                         onPressed: controller.onFav,
                       ),
                       textIconButton(
                         icon: FontAwesomeIcons.thumbsUp,
-                        activitedIcon: FontAwesomeIcons.solidThumbsUp,
+                        activatedIcon: FontAwesomeIcons.solidThumbsUp,
                         text: '点赞',
                         stat: stats.like,
                         onPressed: controller.onLike,
