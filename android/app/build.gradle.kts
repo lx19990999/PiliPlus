@@ -40,6 +40,8 @@ android {
 
     val config = keyProperties.getProperty("storeFile")?.let {
         signingConfigs.create("release") {
+            // storeFile 路径相对于当前 build.gradle.kts 文件（app 目录）
+            // key.properties 中的 storeFile 应该是相对于 app 目录的路径，如 "key.jks"
             storeFile = file(it)
             storePassword = keyProperties.getProperty("storePassword")
             keyAlias = keyProperties.getProperty("keyAlias")

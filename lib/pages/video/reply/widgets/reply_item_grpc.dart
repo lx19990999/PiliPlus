@@ -322,7 +322,10 @@ class ReplyItemGrpc extends StatelessWidget {
         ],
         if (replyLevel != 0) ...[
           const SizedBox(height: 4),
-          buttonAction(context, theme, replyItem.replyControl),
+          Padding(
+            padding: padding,
+            child: buttonAction(context, theme, replyItem.replyControl),
+          ),
         ],
         if (replyLevel == 1 && replyItem.count > Int64.ZERO) ...[
           Padding(
@@ -347,8 +350,8 @@ class ReplyItemGrpc extends StatelessWidget {
     );
     return Row(
       mainAxisAlignment: MainAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        const SizedBox(width: 36),
         TextButton(
           style: style,
           onPressed: () {
