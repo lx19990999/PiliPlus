@@ -10,6 +10,7 @@ import 'package:PiliPlus/models/common/member/tab_type.dart';
 import 'package:PiliPlus/models/common/msg/msg_unread_type.dart';
 import 'package:PiliPlus/models/common/sponsor_block/segment_type.dart';
 import 'package:PiliPlus/models/common/sponsor_block/skip_type.dart';
+import 'package:PiliPlus/models/common/super_chat_type.dart';
 import 'package:PiliPlus/models/common/super_resolution_type.dart';
 import 'package:PiliPlus/models/common/theme/theme_type.dart';
 import 'package:PiliPlus/models/common/video/audio_quality.dart';
@@ -24,13 +25,13 @@ import 'package:PiliPlus/plugin/pl_player/models/bottom_progress_behavior.dart';
 import 'package:PiliPlus/plugin/pl_player/models/fullscreen_mode.dart';
 import 'package:PiliPlus/plugin/pl_player/models/hwdec_type.dart';
 import 'package:PiliPlus/plugin/pl_player/models/play_repeat.dart';
-import 'package:PiliPlus/utils/context_ext.dart';
-import 'package:PiliPlus/utils/extension.dart';
+import 'package:PiliPlus/utils/extension/context_ext.dart';
+import 'package:PiliPlus/utils/extension/iterable_ext.dart';
 import 'package:PiliPlus/utils/global_data.dart';
 import 'package:PiliPlus/utils/login_utils.dart';
+import 'package:PiliPlus/utils/platform_utils.dart';
 import 'package:PiliPlus/utils/storage.dart';
 import 'package:PiliPlus/utils/storage_key.dart';
-import 'package:PiliPlus/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart' hide ContextExtensionss;
 import 'package:hive/hive.dart';
@@ -107,22 +108,24 @@ abstract class Pref {
 
   static List<Pair<SegmentType, SkipType>> get blockSettings {
     final list = _setting.get(SettingBoxKey.blockSettings) as List?;
-    if (list == null) {
+    if (list == null || list.length != SegmentType.values.length) {
       return SegmentType.values
           .map((i) => Pair(first: i, second: SkipType.skipOnce))
           .toList();
     }
     return SegmentType.values
         .map(
-          (item) =>
-              Pair(first: item, second: SkipType.values[list[item.index]]),
+          (item) => Pair(
+            first: item,
+            second: SkipType.values[list[item.index]],
+          ),
         )
         .toList();
   }
 
   static List<Color> get blockColor {
     final list = _setting.get(SettingBoxKey.blockColor) as List?;
-    if (list == null) {
+    if (list == null || list.length != SegmentType.values.length) {
       return SegmentType.values.map((i) => i.color).toList();
     }
     return SegmentType.values.map(
@@ -133,9 +136,6 @@ abstract class Pref {
       },
     ).toList();
   }
-
-  static bool get hiddenSettingUnlocked =>
-      _setting.get(SettingBoxKey.hiddenSettingUnlocked, defaultValue: false);
 
   static bool get feedBackEnable =>
       _setting.get(SettingBoxKey.feedBackEnable, defaultValue: false);
@@ -171,6 +171,9 @@ abstract class Pref {
 
   static double get smallCardWidth =>
       _setting.get(SettingBoxKey.smallCardWidth, defaultValue: 240.0);
+
+  static double get recommendCardWidth =>
+      _setting.get(SettingBoxKey.recommendCardWidth, defaultValue: 240.0);
 
   static UpPanelPosition get upPanelPosition =>
       UpPanelPosition.values[_setting.get(
@@ -275,7 +278,7 @@ abstract class Pref {
 
   static double get refreshDisplacement => _setting.get(
     SettingBoxKey.refreshDisplacement,
-    defaultValue: Utils.isMobile ? 20.0 : 40.0,
+    defaultValue: PlatformUtils.isMobile ? 20.0 : 40.0,
   );
 
   static String get blockUserID {
@@ -654,6 +657,7 @@ abstract class Pref {
       _setting.get(SettingBoxKey.customColor, defaultValue: 0);
 
   static bool get dynamicColor =>
+      !Platform.isIOS &&
       _setting.get(SettingBoxKey.dynamicColor, defaultValue: !Platform.isIOS);
 
   static bool get autoClearCache =>
@@ -820,8 +824,11 @@ abstract class Pref {
   static bool get showMemberShop =>
       _setting.get(SettingBoxKey.showMemberShop, defaultValue: false);
 
-  static bool get showSuperChat =>
-      _setting.get(SettingBoxKey.showSuperChat, defaultValue: true);
+  static SuperChatType get superChatType =>
+      SuperChatType.values[_setting.get(
+        SettingBoxKey.superChatType,
+        defaultValue: SuperChatType.valid.index,
+      )];
 
   static bool get minimizeOnExit =>
       _setting.get(SettingBoxKey.minimizeOnExit, defaultValue: true);
@@ -876,7 +883,7 @@ abstract class Pref {
 
   static bool get showBatteryLevel => _setting.get(
     SettingBoxKey.showBatteryLevel,
-    defaultValue: Utils.isMobile,
+    defaultValue: PlatformUtils.isMobile,
   );
 
   static FollowOrderType get followOrderType =>

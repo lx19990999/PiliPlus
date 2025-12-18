@@ -15,7 +15,7 @@ import 'package:PiliPlus/pages/article/widgets/opus_content.dart';
 import 'package:PiliPlus/pages/common/dyn/common_dyn_page.dart';
 import 'package:PiliPlus/pages/dynamics_repost/view.dart';
 import 'package:PiliPlus/utils/date_utils.dart';
-import 'package:PiliPlus/utils/extension.dart';
+import 'package:PiliPlus/utils/extension/get_ext.dart';
 import 'package:PiliPlus/utils/grid.dart';
 import 'package:PiliPlus/utils/image_utils.dart';
 import 'package:PiliPlus/utils/num_utils.dart';
@@ -568,69 +568,77 @@ class _ArticlePageState extends CommonDynPageState<ArticlePage> {
                   ),
                   padding: EdgeInsets.only(bottom: padding.bottom),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      Builder(
-                        builder: (btnContext) {
-                          final forward = stats.forward;
-                          return textIconButton(
-                            text: '转发',
-                            icon: FontAwesomeIcons.shareFromSquare,
-                            stat: forward,
-                            onPressed: () {
-                              if (controller.opusData == null &&
-                                  controller.articleData?.dynIdStr == null) {
-                                SmartDialog.showToast(
-                                  'err: ${controller.id}',
-                                );
-                                return;
-                              }
-                              final summary = controller.summary;
-                              showModalBottomSheet(
-                                context: context,
-                                isScrollControlled: true,
-                                useSafeArea: true,
-                                builder: (context) => RepostPanel(
-                                  item: controller.opusData,
-                                  dynIdStr: controller.articleData?.dynIdStr,
-                                  pic: summary.cover,
-                                  title: summary.title,
-                                  uname: summary.author?.name,
-                                  callback: () {
-                                    if (forward != null) {
-                                      int count = forward.count ?? 0;
-                                      forward.count = count + 1;
-                                      if (btnContext.mounted) {
-                                        (btnContext as Element?)
-                                            ?.markNeedsBuild();
+                      Expanded(
+                        child: Builder(
+                          builder: (btnContext) {
+                            final forward = stats.forward;
+                            return textIconButton(
+                              text: '转发',
+                              icon: FontAwesomeIcons.shareFromSquare,
+                              stat: forward,
+                              onPressed: () {
+                                if (controller.opusData == null &&
+                                    controller.articleData?.dynIdStr == null) {
+                                  SmartDialog.showToast(
+                                    'err: ${controller.id}',
+                                  );
+                                  return;
+                                }
+                                final summary = controller.summary;
+                                showModalBottomSheet(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  useSafeArea: true,
+                                  builder: (context) => RepostPanel(
+                                    item: controller.opusData,
+                                    dynIdStr: controller.articleData?.dynIdStr,
+                                    pic: summary.cover,
+                                    title: summary.title,
+                                    uname: summary.author?.name,
+                                    onSuccess: () {
+                                      if (forward != null) {
+                                        int count = forward.count ?? 0;
+                                        forward.count = count + 1;
+                                        if (btnContext.mounted) {
+                                          (btnContext as Element?)
+                                              ?.markNeedsBuild();
+                                        }
                                       }
-                                    }
-                                  },
-                                ),
-                              );
-                            },
-                          );
-                        },
+                                    },
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        ),
                       ),
-                      textIconButton(
-                        text: '分享',
-                        icon: CustomIcons.share_node,
-                        stat: null,
-                        onPressed: () => Utils.shareText(controller.url),
+                      Expanded(
+                        child: textIconButton(
+                          text: '分享',
+                          icon: CustomIcons.share_node,
+                          stat: null,
+                          onPressed: () => Utils.shareText(controller.url),
+                        ),
                       ),
-                      textIconButton(
-                        icon: FontAwesomeIcons.star,
-                        activatedIcon: FontAwesomeIcons.solidStar,
-                        text: '收藏',
-                        stat: stats.favorite,
-                        onPressed: controller.onFav,
+                      Expanded(
+                        child: textIconButton(
+                          icon: FontAwesomeIcons.star,
+                          activatedIcon: FontAwesomeIcons.solidStar,
+                          text: '收藏',
+                          stat: stats.favorite,
+                          onPressed: controller.onFav,
+                        ),
                       ),
-                      textIconButton(
-                        icon: FontAwesomeIcons.thumbsUp,
-                        activatedIcon: FontAwesomeIcons.solidThumbsUp,
-                        text: '点赞',
-                        stat: stats.like,
-                        onPressed: controller.onLike,
+                      Expanded(
+                        child: textIconButton(
+                          icon: FontAwesomeIcons.thumbsUp,
+                          activatedIcon: FontAwesomeIcons.solidThumbsUp,
+                          text: '点赞',
+                          stat: stats.like,
+                          onPressed: controller.onLike,
+                        ),
                       ),
                     ],
                   ),

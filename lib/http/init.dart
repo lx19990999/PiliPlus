@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:PiliPlus/http/api.dart';
 import 'package:PiliPlus/http/constants.dart';
+import 'package:PiliPlus/http/loading_state.dart';
 import 'package:PiliPlus/http/retry_interceptor.dart';
 import 'package:PiliPlus/http/user.dart';
 import 'package:PiliPlus/utils/accounts.dart';
@@ -48,8 +49,8 @@ class Request {
 
   static Future<void> setCoin() async {
     final res = await UserHttp.getCoin();
-    if (res['status']) {
-      GlobalData().coins = res['data'];
+    if (res case Success(:final response)) {
+      GlobalData().coins = response;
     }
   }
 
@@ -61,14 +62,20 @@ class Request {
       // final html = await Request().get(Api.dynamicSpmPrefix,
       //     options: Options(extra: {'account': account}));
       // final String spmPrefix = _spmPrefixExp.firstMatch(html.data)!.group(1)!;
-      final String randPngEnd = base64.encode(
-        List<int>.generate(32, (_) => Utils.random.nextInt(256)) +
-            List<int>.filled(4, 0) +
-            [73, 69, 78, 68] +
-            List<int>.generate(4, (_) => Utils.random.nextInt(256)),
-      );
+      final String randPngEnd = base64.encode([
+        ...Iterable<int>.generate(32, (_) => Utils.random.nextInt(256)),
+        0,
+        0,
+        0,
+        0,
+        73,
+        69,
+        78,
+        68,
+        ...Iterable<int>.generate(4, (_) => Utils.random.nextInt(256)),
+      ]);
 
-      String jsonData = json.encode({
+      final jsonData = json.encode({
         '3064': 1,
         '39c8': '333.1387.fp.risk',
         '3c43': {

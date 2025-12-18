@@ -12,9 +12,12 @@ import 'package:PiliPlus/utils/storage_key.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
 import 'package:PiliPlus/utils/utils.dart';
 import 'package:catcher_2/model/platform_type.dart';
+import 'package:catcher_2/model/report.dart' as catcher;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
+
+const _snackBarDisplayDuration = Duration(seconds: 1);
 
 class LogsPage extends StatefulWidget {
   const LogsPage({super.key});
@@ -62,6 +65,7 @@ class _LogsPageState extends State<LogsPage> {
           const {},
           null,
           PlatformType.unknown,
+          null,
         );
       }
     }).toList();
@@ -77,7 +81,10 @@ class _LogsPageState extends State<LogsPage> {
     );
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('复制成功')),
+        const SnackBar(
+          content: Text('复制成功'),
+          duration: _snackBarDisplayDuration,
+        ),
       );
     }
   }
@@ -86,7 +93,10 @@ class _LogsPageState extends State<LogsPage> {
     if (await LoggerUtils.clearLogs()) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('已清空')),
+          const SnackBar(
+            content: Text('已清空'),
+            duration: _snackBarDisplayDuration,
+          ),
         );
         logsContent.clear();
         setState(() {});
@@ -117,6 +127,7 @@ class _LogsPageState extends State<LogsPage> {
                   PageUtils.launchURL('${Constants.sourceCodeUrl}/issues');
                   break;
                 case 'clear':
+                  latestLog = null;
                   clearLogsHandle();
                   break;
                 default:
@@ -338,7 +349,10 @@ class ReportCard extends StatelessWidget {
             onPressed: () {
               Utils.copyText('```\n$report```', needToast: false);
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('已将 $dateTime 复制至剪贴板')),
+                SnackBar(
+                  content: Text('已将 $dateTime 复制至剪贴板'),
+                  duration: _snackBarDisplayDuration,
+                ),
               );
             },
             icon: const Icon(
@@ -435,33 +449,18 @@ Widget _card(List<Widget> contents) {
   );
 }
 
-class Report {
+class Report extends catcher.Report {
   Report(
-    this.error,
-    this.stackTrace,
-    this.dateTime,
-    this.deviceParameters,
-    this.applicationParameters,
-    this.customParameters,
-    this.errorDetails,
-    this.platformType,
+    super.error,
+    super.stackTrace,
+    super.dateTime,
+    super.deviceParameters,
+    super.applicationParameters,
+    super.customParameters,
+    super.errorDetails,
+    super.platformType,
+    super.screenshot,
   );
-
-  final dynamic error;
-
-  final dynamic stackTrace;
-
-  final DateTime dateTime;
-
-  final Map<String, dynamic> deviceParameters;
-
-  final Map<String, dynamic> applicationParameters;
-
-  final Map<String, dynamic> customParameters;
-
-  final FlutterErrorDetails? errorDetails;
-
-  final PlatformType platformType;
 
   bool isExpanded = false;
 
@@ -474,6 +473,7 @@ class Report {
     json['customParameters'] ?? const {},
     null,
     PlatformType.values.byName(json['platformType']),
+    null,
   );
 
   Report copyWith({
@@ -495,6 +495,7 @@ class Report {
       customParameters ?? this.customParameters,
       errorDetails ?? this.errorDetails,
       platformType ?? this.platformType,
+      null,
     );
   }
 

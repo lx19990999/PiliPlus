@@ -9,7 +9,7 @@ import 'package:PiliPlus/pages/dynamics/widgets/author_panel.dart';
 import 'package:PiliPlus/pages/dynamics/widgets/dynamic_panel.dart';
 import 'package:PiliPlus/pages/dynamics_detail/controller.dart';
 import 'package:PiliPlus/pages/dynamics_repost/view.dart';
-import 'package:PiliPlus/utils/extension.dart';
+import 'package:PiliPlus/utils/extension/get_ext.dart';
 import 'package:PiliPlus/utils/grid.dart';
 import 'package:PiliPlus/utils/num_utils.dart';
 import 'package:PiliPlus/utils/request_utils.dart';
@@ -262,28 +262,30 @@ class _DynamicDetailPageState extends CommonDynPageState<DynamicDetailPage> {
                   ),
                   padding: EdgeInsets.only(bottom: padding.bottom),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      Builder(
-                        builder: (btnContext) {
-                          final forward = moduleStat?.forward;
-                          return textIconButton(
-                            icon: FontAwesomeIcons.shareFromSquare,
-                            text: '转发',
-                            stat: forward,
-                            onPressed: () => showModalBottomSheet(
-                              context: context,
-                              isScrollControlled: true,
-                              useSafeArea: true,
-                              builder: (context) => RepostPanel(
-                                item: controller.dynItem,
-                                callback: () {
-                                  if (forward != null) {
-                                    int count = forward.count ?? 0;
-                                    forward.count = count + 1;
-                                    if (btnContext.mounted) {
-                                      (btnContext as Element)
-                                          .markNeedsBuild();
+                      Expanded(
+                        child: Builder(
+                          builder: (btnContext) {
+                            final forward = moduleStat?.forward;
+                            return textIconButton(
+                              icon: FontAwesomeIcons.shareFromSquare,
+                              text: '转发',
+                              stat: forward,
+                              onPressed: () => showModalBottomSheet(
+                                context: context,
+                                isScrollControlled: true,
+                                useSafeArea: true,
+                                builder: (context) => RepostPanel(
+                                  item: controller.dynItem,
+                                  onSuccess: () {
+                                    if (forward != null) {
+                                      int count = forward.count ?? 0;
+                                      forward.count = count + 1;
+                                      if (btnContext.mounted) {
+                                        (btnContext as Element)
+                                            .markNeedsBuild();
+                                      }
                                     }
                                   },
                                 ),
@@ -292,31 +294,35 @@ class _DynamicDetailPageState extends CommonDynPageState<DynamicDetailPage> {
                           },
                         ),
                       ),
-                      textIconButton(
-                        icon: CustomIcons.share_node,
-                        text: '分享',
-                        stat: null,
-                        onPressed: () => Utils.shareText(
-                          '${HttpString.dynamicShareBaseUrl}/${controller.dynItem.idStr}',
+                      Expanded(
+                        child: textIconButton(
+                          icon: CustomIcons.share_node,
+                          text: '分享',
+                          stat: null,
+                          onPressed: () => Utils.shareText(
+                            '${HttpString.dynamicShareBaseUrl}/${controller.dynItem.idStr}',
+                          ),
                         ),
                       ),
-                      Builder(
-                        builder: (context) {
-                          return textIconButton(
-                            icon: FontAwesomeIcons.thumbsUp,
-                            activatedIcon: FontAwesomeIcons.solidThumbsUp,
-                            text: '点赞',
-                            stat: moduleStat?.like,
-                            onPressed: () => RequestUtils.onLikeDynamic(
-                              controller.dynItem,
-                              () {
-                                if (context.mounted) {
-                                  (context as Element).markNeedsBuild();
-                                }
-                              },
-                            ),
-                          );
-                        },
+                      Expanded(
+                        child: Builder(
+                          builder: (context) {
+                            return textIconButton(
+                              icon: FontAwesomeIcons.thumbsUp,
+                              activatedIcon: FontAwesomeIcons.solidThumbsUp,
+                              text: '点赞',
+                              stat: moduleStat?.like,
+                              onPressed: () => RequestUtils.onLikeDynamic(
+                                controller.dynItem,
+                                () {
+                                  if (context.mounted) {
+                                    (context as Element).markNeedsBuild();
+                                  }
+                                },
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     ],
                   ),

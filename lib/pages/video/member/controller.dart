@@ -6,7 +6,7 @@ import 'package:PiliPlus/models_new/space/space_archive/data.dart';
 import 'package:PiliPlus/models_new/space/space_archive/item.dart';
 import 'package:PiliPlus/pages/common/common_list_controller.dart';
 import 'package:PiliPlus/utils/accounts.dart';
-import 'package:PiliPlus/utils/extension.dart';
+import 'package:PiliPlus/utils/extension/scroll_controller_ext.dart';
 import 'package:get/get.dart';
 
 class HorizontalMemberPageController
@@ -27,13 +27,11 @@ class HorizontalMemberPageController
   }
 
   Future<void> getUserInfo() async {
-    var res = await MemberHttp.memberInfo(mid: mid);
-    if (res['status']) {
-      userState.value = Success(res['data']);
+    final res = await MemberHttp.memberInfo(mid: mid);
+    userState.value = res;
+    if (res.isSuccess) {
       getMemberStat();
       getMemberView();
-    } else {
-      userState.value = Error(res['msg']);
     }
   }
 
@@ -111,7 +109,7 @@ class HorizontalMemberPageController
   @override
   Future<void> onRefresh() {
     if (!hasPrev) {
-      return Future.value();
+      return Future.syncValue(null);
     }
     isLoadPrevious = true;
     return queryData();

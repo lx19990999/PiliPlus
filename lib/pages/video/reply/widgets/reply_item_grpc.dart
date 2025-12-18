@@ -9,7 +9,7 @@ import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
 import 'package:PiliPlus/common/widgets/pendant_avatar.dart';
 import 'package:PiliPlus/grpc/bilibili/main/community/reply/v1.pb.dart'
     show ReplyInfo, ReplyControl, Content, Url;
-import 'package:PiliPlus/http/init.dart';
+import 'package:PiliPlus/http/reply.dart';
 import 'package:PiliPlus/http/video.dart';
 import 'package:PiliPlus/models/common/badge_type.dart';
 import 'package:PiliPlus/models/common/image_type.dart';
@@ -18,18 +18,19 @@ import 'package:PiliPlus/pages/save_panel/view.dart';
 import 'package:PiliPlus/pages/video/controller.dart';
 import 'package:PiliPlus/pages/video/reply/widgets/zan_grpc.dart';
 import 'package:PiliPlus/utils/accounts.dart';
-import 'package:PiliPlus/utils/context_ext.dart';
 import 'package:PiliPlus/utils/date_utils.dart';
 import 'package:PiliPlus/utils/duration_utils.dart';
-import 'package:PiliPlus/utils/extension.dart';
+import 'package:PiliPlus/utils/extension/context_ext.dart';
+import 'package:PiliPlus/utils/extension/string_ext.dart';
+import 'package:PiliPlus/utils/extension/theme_ext.dart';
 import 'package:PiliPlus/utils/feed_back.dart';
 import 'package:PiliPlus/utils/image_utils.dart';
 import 'package:PiliPlus/utils/page_utils.dart';
+import 'package:PiliPlus/utils/platform_utils.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
 import 'package:PiliPlus/utils/url_utils.dart';
 import 'package:PiliPlus/utils/utils.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:dio/dio.dart';
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/gestures.dart';
@@ -77,7 +78,7 @@ class ReplyItemGrpc extends StatelessWidget {
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
 
-    final isMobile = Utils.isMobile;
+    final isMobile = PlatformUtils.isMobile;
     void showMore() => showModalBottomSheet(
       context: context,
       useSafeArea: true,
@@ -322,10 +323,7 @@ class ReplyItemGrpc extends StatelessWidget {
         ],
         if (replyLevel != 0) ...[
           const SizedBox(height: 4),
-          Padding(
-            padding: padding,
-            child: buttonAction(context, theme, replyItem.replyControl),
-          ),
+          buttonAction(context, theme, replyItem.replyControl),
         ],
         if (replyLevel == 1 && replyItem.count > Int64.ZERO) ...[
           Padding(
@@ -342,76 +340,73 @@ class ReplyItemGrpc extends StatelessWidget {
     ThemeData theme,
     ReplyControl replyControl,
   ) {
-    final ButtonStyle style = TextButton.styleFrom(
+    final textStyle = TextStyle(
+      fontSize: theme.textTheme.labelMedium!.fontSize,
+      color: theme.colorScheme.outline,
+      fontWeight: FontWeight.normal,
+    );
+    final buttonStyle = TextButton.styleFrom(
       padding: EdgeInsets.zero,
-      minimumSize: Size.zero,
       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       visualDensity: VisualDensity.compact,
     );
     return Row(
-      mainAxisAlignment: MainAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        TextButton(
-          style: style,
-          onPressed: () {
-            feedBack();
-            onReply?.call(replyItem);
-          },
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.reply,
-                size: 18,
-                color: replyItem.replyControl.upLike
-                    ? theme.colorScheme.error
-                    : theme.colorScheme.outline.withValues(alpha: 0.8),
-              ),
-              const SizedBox(width: 3),
-            ],
-          ),
-        ),
-        if (replyItem.replyControl.cardLabels
-            .map((item) => item.textContent)
-            .contains('热评')) ...[
-          Text(
-            '热评',
-            style: TextStyle(
-              color: theme.colorScheme.secondary,
-              fontSize: theme.textTheme.labelMedium!.fontSize,
+        const SizedBox(width: 36),
+        SizedBox(
+          height: 32,
+          child: TextButton(
+            style: buttonStyle,
+            onPressed: () {
+              feedBack();
+              onReply?.call(replyItem);
+            },
+            child: Row(
+              children: [
+                Icon(
+                  Icons.reply,
+                  size: 18,
+                  color: theme.colorScheme.outline.withValues(alpha: 0.8),
+                ),
+                const SizedBox(width: 3),
+                Text('回复', style: textStyle),
+              ],
             ),
           ),
+        ),
+        const SizedBox(width: 2),
+        if (replyItem.replyControl.cardLabels.isNotEmpty) ...[
+          Text(
+            replyItem.replyControl.cardLabels
+                .map((e) => e.textContent)
+                .join('  '),
+            style: textStyle.copyWith(color: theme.colorScheme.secondary),
+          ),
+          const SizedBox(width: 2),
         ],
         if (replyLevel == 2 && needDivider && replyItem.id != replyItem.dialog)
-          TextButton(
-            onPressed: showDialogue,
-            style: style,
-            child: Text(
-              '查看对话',
-              style: TextStyle(
-                color: theme.colorScheme.outline,
-                fontSize: theme.textTheme.labelMedium!.fontSize,
-                fontWeight: FontWeight.normal,
-              ),
+          SizedBox(
+            height: 32,
+            child: TextButton(
+              onPressed: showDialogue,
+              style: buttonStyle,
+              child: Text('查看对话', style: textStyle),
             ),
           )
         else if (replyLevel == 3 &&
             needDivider &&
             replyItem.parent != replyItem.root)
-          TextButton(
-            onPressed: jumpToDialogue,
-            style: style,
-            child: Text(
-              '跳转回复',
-              style: TextStyle(
-                color: theme.colorScheme.outline,
-                fontSize: theme.textTheme.labelMedium!.fontSize,
-                fontWeight: FontWeight.normal,
-              ),
+          SizedBox(
+            height: 32,
+            child: TextButton(
+              onPressed: jumpToDialogue,
+              style: buttonStyle,
+              child: Text('跳转回复', style: textStyle),
             ),
           ),
+        const Spacer(),
         ZanButtonGrpc(replyItem: replyItem),
+        const SizedBox(width: 5),
       ],
     );
   }
@@ -471,7 +466,7 @@ class ReplyItemGrpc extends StatelessWidget {
                     feedBack();
                     showMore();
                   },
-                  onSecondaryTap: Utils.isMobile ? null : showMore,
+                  onSecondaryTap: PlatformUtils.isMobile ? null : showMore,
                   child: Padding(
                     padding: padding,
                     child: Text.rich(
@@ -923,11 +918,11 @@ class ReplyItemGrpc extends StatelessWidget {
                   rpid: item.id.toInt(),
                 );
                 SmartDialog.dismiss();
-                if (result['status']) {
+                if (result.isSuccess) {
                   SmartDialog.showToast('删除成功');
                   onDelete();
                 } else {
-                  SmartDialog.showToast('删除失败, ${result["msg"]}');
+                  SmartDialog.showToast('删除失败, $result');
                 }
               },
               minLeadingWidth: 0,
@@ -942,28 +937,17 @@ class ReplyItemGrpc extends StatelessWidget {
                   context,
                   ReportOptions.commentReport,
                   (reasonType, reasonDesc, banUid) async {
-                    final res = await Request().post(
-                      '/x/v2/reply/report',
-                      data: {
-                        'add_blacklist': banUid,
-                        'csrf': Accounts.main.csrf,
-                        'gaia_source': 'main_h5',
-                        'oid': item.oid,
-                        'platform': 'android',
-                        'reason': reasonType,
-                        'rpid': item.id,
-                        'scene': 'main',
-                        'type': 1,
-                        if (reasonType == 0) 'content': reasonDesc!,
-                      },
-                      options: Options(
-                        contentType: Headers.formUrlEncodedContentType,
-                      ),
+                    final res = await ReplyHttp.report(
+                      rpid: item.id,
+                      oid: item.oid,
+                      reasonType: reasonType,
+                      reasonDesc: reasonDesc,
+                      banUid: banUid,
                     );
-                    if (res.data['code'] == 0) {
+                    if (res.isSuccess) {
                       onDelete();
                     }
-                    return res.data as Map;
+                    return res;
                   },
                 );
               },

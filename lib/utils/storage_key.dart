@@ -2,8 +2,6 @@
 
 abstract class SettingBoxKey {
   static const String btmProgressBehavior = 'btmProgressBehavior',
-      defaultVideoSpeed = 'defaultVideoSpeed',
-      autoUpgradeEnable = 'autoUpgradeEnable',
       defaultVideoQa = 'defaultVideoQa',
       defaultVideoQaCellular = 'defaultVideoQaCellular',
       defaultAudioQa = 'defaultAudioQa',
@@ -20,11 +18,10 @@ abstract class SettingBoxKey {
       hardwareDecoding = 'hardwareDecoding',
       videoSync = 'videoSync',
       p1080 = 'p1080',
-      enableAutoBrightness = 'enableAutoBrightness',
       enableAutoEnter = 'enableAutoEnter',
       enableAutoExit = 'enableAutoExit',
       enableOnlineTotal = 'enableOnlineTotal',
-      showSuperChat = 'showSuperChat',
+      superChatType = 'superChatType',
       keyboardControl = 'keyboardControl',
       pauseOnMinimize = 'pauseOnMinimize',
       pgcSkipType = 'pgcSkipType',
@@ -205,9 +202,9 @@ abstract class SettingBoxKey {
       defaultTextScale = 'textScale',
       dynamicColor = 'dynamicColor',
       customColor = 'customColor',
-      enableSingleRow = 'enableSingleRow',
       displayMode = 'displayMode',
       smallCardWidth = 'smallCardWidth',
+      recommendCardWidth = 'recommendCardWidth',
       dynamicsWaterfallFlow = 'dynamicsWaterfallFlow',
       upPanelPosition = 'upPanelPosition',
       dynamicsShowAllFollowedUp = 'dynamicsShowAllFollowedUp',
@@ -221,8 +218,6 @@ abstract class SettingBoxKey {
       dynamicBadgeMode = 'dynamicBadgeMode',
       msgBadgeMode = 'msgBadgeMode',
       msgUnReadTypeV2 = 'msgUnReadTypeV2',
-      hiddenSettingUnlocked = 'hiddenSettingUnlocked',
-      enableGradientBg = 'enableGradientBg',
       navBarSort = 'navBarSort',
       tempPlayerConf = 'tempPlayerConf',
       reduceLuxColor = 'reduceLuxColor',
@@ -239,10 +234,7 @@ abstract class LocalCacheKey {
 }
 
 abstract class VideoBoxKey {
-  static const String videoFit = 'videoFit',
-      videoBrightness = 'videoBrightness',
-      videoSpeed = 'videoSpeed',
-      playRepeat = 'playRepeat',
+  static const String playRepeat = 'playRepeat',
       playSpeedDefault = 'playSpeedDefault',
       longPressSpeedDefault = 'longPressSpeedDefault',
       speedsList = 'speedsList',

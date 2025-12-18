@@ -9,12 +9,11 @@ import 'package:PiliPlus/pages/search/controller.dart';
 import 'package:PiliPlus/pages/search/widgets/hot_keyword.dart';
 import 'package:PiliPlus/pages/search/widgets/search_text.dart';
 import 'package:PiliPlus/utils/em.dart' show Em;
-import 'package:PiliPlus/utils/extension.dart';
+import 'package:PiliPlus/utils/extension/size_ext.dart';
 import 'package:PiliPlus/utils/storage.dart';
 import 'package:PiliPlus/utils/storage_key.dart';
 import 'package:PiliPlus/utils/utils.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart' hide ContextExtensionss;
 
 class SearchPage extends StatefulWidget {
@@ -397,15 +396,10 @@ class _SearchPageState extends State<SearchPage> {
         title: '历史记录',
         toJson: () => jsonEncode(_searchController.historyList),
         fromJson: (json) {
-          try {
-            final list = List<String>.from(json);
-            _searchController.historyList.value = list;
-            GStorage.historyWord.put('cacheList', list);
-            return true;
-          } catch (e) {
-            SmartDialog.showToast(e.toString());
-            return false;
-          }
+          final list = List<String>.from(json);
+          _searchController.historyList.value = list;
+          GStorage.historyWord.put('cacheList', list);
+          return true;
         },
       ),
     ),
