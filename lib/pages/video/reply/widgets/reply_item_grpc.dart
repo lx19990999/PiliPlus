@@ -323,7 +323,10 @@ class ReplyItemGrpc extends StatelessWidget {
         ],
         if (replyLevel != 0) ...[
           const SizedBox(height: 4),
-          buttonAction(context, theme, replyItem.replyControl),
+          Padding(
+            padding: padding,
+            child: buttonAction(context, theme, replyItem.replyControl),
+          ),
         ],
         if (replyLevel == 1 && replyItem.count > Int64.ZERO) ...[
           Padding(
@@ -340,73 +343,76 @@ class ReplyItemGrpc extends StatelessWidget {
     ThemeData theme,
     ReplyControl replyControl,
   ) {
-    final textStyle = TextStyle(
-      fontSize: theme.textTheme.labelMedium!.fontSize,
-      color: theme.colorScheme.outline,
-      fontWeight: FontWeight.normal,
-    );
-    final buttonStyle = TextButton.styleFrom(
+    final ButtonStyle style = TextButton.styleFrom(
       padding: EdgeInsets.zero,
+      minimumSize: Size.zero,
       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       visualDensity: VisualDensity.compact,
     );
     return Row(
+      mainAxisAlignment: MainAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        const SizedBox(width: 36),
-        SizedBox(
-          height: 32,
-          child: TextButton(
-            style: buttonStyle,
-            onPressed: () {
-              feedBack();
-              onReply?.call(replyItem);
-            },
-            child: Row(
-              children: [
-                Icon(
-                  Icons.reply,
-                  size: 18,
-                  color: theme.colorScheme.outline.withValues(alpha: 0.8),
-                ),
-                const SizedBox(width: 3),
-                Text('回复', style: textStyle),
-              ],
-            ),
+        TextButton(
+          style: style,
+          onPressed: () {
+            feedBack();
+            onReply?.call(replyItem);
+          },
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.reply,
+                size: 18,
+                color: replyItem.replyControl.upLike
+                    ? theme.colorScheme.error
+                    : theme.colorScheme.outline.withValues(alpha: 0.8),
+              ),
+              const SizedBox(width: 3),
+            ],
           ),
         ),
-        const SizedBox(width: 2),
-        if (replyItem.replyControl.cardLabels.isNotEmpty) ...[
+        if (replyItem.replyControl.cardLabels
+            .map((item) => item.textContent)
+            .contains('热评')) ...[
           Text(
-            replyItem.replyControl.cardLabels
-                .map((e) => e.textContent)
-                .join('  '),
-            style: textStyle.copyWith(color: theme.colorScheme.secondary),
+            '热评',
+            style: TextStyle(
+              color: theme.colorScheme.secondary,
+              fontSize: theme.textTheme.labelMedium!.fontSize,
+            ),
           ),
-          const SizedBox(width: 2),
         ],
         if (replyLevel == 2 && needDivider && replyItem.id != replyItem.dialog)
-          SizedBox(
-            height: 32,
-            child: TextButton(
-              onPressed: showDialogue,
-              style: buttonStyle,
-              child: Text('查看对话', style: textStyle),
+          TextButton(
+            onPressed: showDialogue,
+            style: style,
+            child: Text(
+              '查看对话',
+              style: TextStyle(
+                color: theme.colorScheme.outline,
+                fontSize: theme.textTheme.labelMedium!.fontSize,
+                fontWeight: FontWeight.normal,
+              ),
             ),
           )
         else if (replyLevel == 3 &&
             needDivider &&
             replyItem.parent != replyItem.root)
-          SizedBox(
-            height: 32,
-            child: TextButton(
-              onPressed: jumpToDialogue,
-              style: buttonStyle,
-              child: Text('跳转回复', style: textStyle),
+          TextButton(
+            onPressed: jumpToDialogue,
+            style: style,
+            child: Text(
+              '跳转回复',
+              style: TextStyle(
+                color: theme.colorScheme.outline,
+                fontSize: theme.textTheme.labelMedium!.fontSize,
+                fontWeight: FontWeight.normal,
+              ),
             ),
           ),
-        const Spacer(),
         ZanButtonGrpc(replyItem: replyItem),
-        const SizedBox(width: 5),
       ],
     );
   }

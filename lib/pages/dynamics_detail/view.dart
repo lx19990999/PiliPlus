@@ -262,67 +262,61 @@ class _DynamicDetailPageState extends CommonDynPageState<DynamicDetailPage> {
                   ),
                   padding: EdgeInsets.only(bottom: padding.bottom),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    mainAxisAlignment: MainAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Builder(
-                          builder: (btnContext) {
-                            final forward = moduleStat?.forward;
-                            return textIconButton(
-                              icon: FontAwesomeIcons.shareFromSquare,
-                              text: '转发',
-                              stat: forward,
-                              onPressed: () => showModalBottomSheet(
-                                context: context,
-                                isScrollControlled: true,
-                                useSafeArea: true,
-                                builder: (context) => RepostPanel(
-                                  item: controller.dynItem,
-                                  onSuccess: () {
-                                    if (forward != null) {
-                                      int count = forward.count ?? 0;
-                                      forward.count = count + 1;
-                                      if (btnContext.mounted) {
-                                        (btnContext as Element)
-                                            .markNeedsBuild();
-                                      }
+                      Builder(
+                        builder: (btnContext) {
+                          final forward = moduleStat?.forward;
+                          return textIconButton(
+                            icon: FontAwesomeIcons.shareFromSquare,
+                            text: '转发',
+                            stat: forward,
+                            onPressed: () => showModalBottomSheet(
+                              context: context,
+                              isScrollControlled: true,
+                              useSafeArea: true,
+                              builder: (context) => RepostPanel(
+                                item: controller.dynItem,
+                                onSuccess: () {
+                                  if (forward != null) {
+                                    int count = forward.count ?? 0;
+                                    forward.count = count + 1;
+                                    if (btnContext.mounted) {
+                                      (btnContext as Element)
+                                          .markNeedsBuild();
                                     }
-                                  },
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      Expanded(
-                        child: textIconButton(
-                          icon: CustomIcons.share_node,
-                          text: '分享',
-                          stat: null,
-                          onPressed: () => Utils.shareText(
-                            '${HttpString.dynamicShareBaseUrl}/${controller.dynItem.idStr}',
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Builder(
-                          builder: (context) {
-                            return textIconButton(
-                              icon: FontAwesomeIcons.thumbsUp,
-                              activatedIcon: FontAwesomeIcons.solidThumbsUp,
-                              text: '点赞',
-                              stat: moduleStat?.like,
-                              onPressed: () => RequestUtils.onLikeDynamic(
-                                controller.dynItem,
-                                () {
-                                  if (context.mounted) {
-                                    (context as Element).markNeedsBuild();
                                   }
                                 },
                               ),
-                            );
-                          },
+                            ),
+                          );
+                        },
+                      ),
+                      textIconButton(
+                        icon: CustomIcons.share_node,
+                        text: '分享',
+                        stat: null,
+                        onPressed: () => Utils.shareText(
+                          '${HttpString.dynamicShareBaseUrl}/${controller.dynItem.idStr}',
                         ),
+                      ),
+                      Builder(
+                        builder: (context) {
+                          return textIconButton(
+                            icon: FontAwesomeIcons.thumbsUp,
+                            activatedIcon: FontAwesomeIcons.solidThumbsUp,
+                            text: '点赞',
+                            stat: moduleStat?.like,
+                            onPressed: () => RequestUtils.onLikeDynamic(
+                              controller.dynItem,
+                              () {
+                                if (context.mounted) {
+                                  (context as Element).markNeedsBuild();
+                                }
+                              },
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
