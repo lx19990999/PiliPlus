@@ -599,6 +599,14 @@ class _UgcIntroPanelState extends State<UgcIntroPanel> {
                 ? NumUtils.numFormat(videoDetail.stat!.share!)
                 : null,
           ),
+          if (!videoDetailCtr.isFileSource)
+            ActionItem(
+              icon: const Icon(MdiIcons.folderDownloadOutline),
+              onTap: () => videoDetailCtr.onDownload(context),
+              selectStatus: false,
+              semanticsLabel: '离线缓存',
+              text: '缓存',
+            ),
         ],
       ),
     );

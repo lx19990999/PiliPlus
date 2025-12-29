@@ -285,12 +285,12 @@ class _DynamicDetailPageState extends CommonDynPageState<DynamicDetailPage> {
                                       (btnContext as Element)
                                           .markNeedsBuild();
                                     }
-                                  }
-                                },
+                                    }
+                                  },
+                                ),
                               ),
-                            ),
-                          );
-                        },
+                            );
+                          },
                       ),
                       textIconButton(
                         icon: CustomIcons.share_node,

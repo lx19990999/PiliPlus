@@ -20,6 +20,7 @@ import 'package:PiliPlus/utils/page_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
+import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 
 class PgcIntroPage extends StatefulWidget {
   final int? cid;
@@ -465,6 +466,14 @@ class _PgcIntroPageState extends State<PgcIntroPage> {
             semanticsLabel: '转发',
             text: NumUtils.numFormat(item.stat!.share),
           ),
+          if (!videoDetailCtr.isFileSource)
+            ActionItem(
+              icon: const Icon(MdiIcons.folderDownloadOutline),
+              onTap: () => videoDetailCtr.onDownload(context),
+              selectStatus: false,
+              semanticsLabel: '离线缓存',
+              text: '缓存',
+            ),
         ],
       ),
     );

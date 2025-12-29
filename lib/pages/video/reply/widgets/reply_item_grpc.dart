@@ -355,24 +355,24 @@ class ReplyItemGrpc extends StatelessWidget {
       children: <Widget>[
         TextButton(
           style: style,
-          onPressed: () {
-            feedBack();
-            onReply?.call(replyItem);
-          },
-          child: Row(
+            onPressed: () {
+              feedBack();
+              onReply?.call(replyItem);
+            },
+            child: Row(
             mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.reply,
-                size: 18,
+              children: [
+                Icon(
+                  Icons.reply,
+                  size: 18,
                 color: replyItem.replyControl.upLike
                     ? theme.colorScheme.error
                     : theme.colorScheme.outline.withValues(alpha: 0.8),
-              ),
-              const SizedBox(width: 3),
-            ],
+                ),
+                const SizedBox(width: 3),
+              ],
+            ),
           ),
-        ),
         if (replyItem.replyControl.cardLabels
             .map((item) => item.textContent)
             .contains('热评')) ...[
@@ -386,7 +386,7 @@ class ReplyItemGrpc extends StatelessWidget {
         ],
         if (replyLevel == 2 && needDivider && replyItem.id != replyItem.dialog)
           TextButton(
-            onPressed: showDialogue,
+              onPressed: showDialogue,
             style: style,
             child: Text(
               '查看对话',
@@ -401,7 +401,7 @@ class ReplyItemGrpc extends StatelessWidget {
             needDivider &&
             replyItem.parent != replyItem.root)
           TextButton(
-            onPressed: jumpToDialogue,
+              onPressed: jumpToDialogue,
             style: style,
             child: Text(
               '跳转回复',

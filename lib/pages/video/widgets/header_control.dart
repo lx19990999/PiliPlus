@@ -2964,6 +2964,20 @@ class HeaderControlState extends State<HeaderControl>
                     semanticsLabel: '分享',
                   ),
                 ),
+                if (!isFileSource)
+                  SizedBox(
+                    width: 42,
+                    height: 34,
+                    child: ActionItem(
+                      expand: false,
+                      icon: const Icon(
+                        MdiIcons.folderDownloadOutline,
+                        color: Colors.white,
+                      ),
+                      onTap: () => videoDetailCtr.onDownload(context),
+                      semanticsLabel: '离线缓存',
+                    ),
+                  ),
               ],
             ),
         ],
