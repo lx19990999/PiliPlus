@@ -2,15 +2,20 @@ import 'package:PiliPlus/common/widgets/scroll_physics.dart';
 import 'package:PiliPlus/http/loading_state.dart';
 import 'package:PiliPlus/http/member.dart';
 import 'package:PiliPlus/http/search.dart';
+import 'package:PiliPlus/http/video.dart';
 import 'package:PiliPlus/models/common/member/contribute_type.dart';
 import 'package:PiliPlus/models/common/video/source_type.dart';
+import 'package:PiliPlus/models/common/video/video_quality.dart';
 import 'package:PiliPlus/models_new/space/space_archive/data.dart';
 import 'package:PiliPlus/models_new/space/space_archive/episodic_button.dart';
 import 'package:PiliPlus/models_new/space/space_archive/item.dart';
+import 'package:PiliPlus/models_new/video/video_detail/page.dart';
 import 'package:PiliPlus/pages/common/common_list_controller.dart';
+import 'package:PiliPlus/services/download/download_service.dart';
 import 'package:PiliPlus/utils/extension/iterable_ext.dart';
 import 'package:PiliPlus/utils/id_utils.dart';
 import 'package:PiliPlus/utils/page_utils.dart';
+import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 
 class MemberVideoCtr
@@ -217,6 +222,204 @@ class MemberVideoCtr
           break;
         }
       }
+    }
+  }
+
+  Future<void> downloadAll() async {
+    // 获取下载服务实例
+    final downloadService = Get.find<DownloadService>();
+    await downloadService.waitForInitialization;
+
+    // 保存当前状态
+    final savedNext = next;
+    final savedLastAid = lastAid;
+    final savedFirstAid = firstAid;
+    final savedIsLoadPrevious = isLoadPrevious;
+    final savedPage = page;
+
+    try {
+      // 收集所有视频
+      List<SpaceArchiveItem> allVideos = [];
+      int? currentNext = savedNext;
+      String? currentLastAid = savedLastAid;
+      int currentPage = savedPage;
+      bool hasMore = true;
+
+      // 显示加载对话框（只显示一次）
+      SmartDialog.showLoading(msg: '正在加载所有视频列表...');
+
+      // 先添加当前已加载的视频
+      if (loadingState.value case Success(:final response)) {
+        if (response != null && response.isNotEmpty) {
+          allVideos.addAll(response);
+          // 如果已经加载了数据，从下一页开始
+          if (type == ContributeType.charging) {
+            currentPage = savedPage + 1;
+          }
+        }
+      }
+
+      // 循环加载所有页面的数据
+      while (hasMore) {
+        // 更新分页参数
+        if (type == ContributeType.video) {
+          lastAid = currentLastAid;
+          next = null; // video 类型使用 aid 分页，不使用 next
+          page = 0; // video 类型不使用页码
+        } else if (type == ContributeType.charging) {
+          page = currentPage;
+          next = null;
+          lastAid = null;
+        } else {
+          next = currentNext;
+          lastAid = null;
+          page = 0;
+        }
+        isLoadPrevious = false;
+
+        // 加载下一页数据
+        final result = await customGetData();
+        if (result case Success(:final data)) {
+          if (data.item != null && data.item!.isNotEmpty) {
+            allVideos.addAll(data.item!);
+            currentNext = data.next;
+            currentLastAid = data.item?.lastOrNull?.param;
+            
+            // 判断是否还有更多数据
+            if (type == ContributeType.video) {
+              hasMore = data.hasNext == true;
+            } else if (type == ContributeType.charging) {
+              hasMore = data.next != null && data.next != 0;
+              if (hasMore) {
+                currentPage++;
+              }
+            } else {
+              hasMore = data.next != null && data.next != 0;
+            }
+          } else {
+            hasMore = false;
+          }
+        } else {
+          hasMore = false;
+        }
+      }
+
+      // 恢复状态
+      next = savedNext;
+      lastAid = savedLastAid;
+      firstAid = savedFirstAid;
+      isLoadPrevious = savedIsLoadPrevious;
+      page = savedPage;
+
+      if (allVideos.isEmpty) {
+        SmartDialog.dismiss();
+        SmartDialog.showToast('没有可下载的视频');
+        return;
+      }
+
+      // 定义画质优先级列表（按照要求：1080p -> 720p -> 480p）
+      final qualityPriorities = [
+        VideoQuality.high1080, // 1080P 高清
+        VideoQuality.high720, // 720P 准高清
+        VideoQuality.clear480, // 480P 标清
+      ];
+
+      int successCount = 0;
+      int totalCount = allVideos.where((item) => item.cid != null).length;
+
+      // 更新消息，不关闭对话框
+      SmartDialog.showLoading(msg: '准备离线 (${successCount}/${totalCount})');
+
+      for (SpaceArchiveItem item in allVideos) {
+        if (item.cid == null) {
+          continue;
+        }
+
+        try {
+          // 获取视频详情以获取分P信息
+          var videoDetailRes = await VideoHttp.videoIntro(bvid: item.bvid!);
+          if (videoDetailRes case Success(:var response)) {
+            var videoDetail = response;
+            var pages = videoDetail.pages;
+
+            // 如果有多个分P，对每个分P进行下载
+            if (pages != null && pages.isNotEmpty) {
+              for (var page in pages) {
+                // 尝试按优先级下载
+                for (var quality in qualityPriorities) {
+                  try {
+                    // 创建Part对象
+                    Part part = Part(
+                      cid: page.cid,
+                      page: page.page,
+                      from: page.from,
+                      part: page.part,
+                      duration: page.duration,
+                      vid: page.vid,
+                      weblink: page.weblink,
+                    );
+
+                    // 调用下载方法
+                    downloadService.downloadVideo(
+                      part,
+                      videoDetail,
+                      null,
+                      quality,
+                    );
+                    successCount++;
+                    // 只更新消息，不关闭对话框
+                    SmartDialog.showLoading(
+                      msg: '已添加到下载队列 (${successCount}/${totalCount})',
+                    );
+                    break; // 成功添加到下载队列后跳出质量选择循环
+                  } catch (e) {
+                    continue; // 尝试下一个质量
+                  }
+                }
+              }
+            } else {
+              // 单个视频的情况
+              for (var quality in qualityPriorities) {
+                try {
+                  Part part = Part(
+                    cid: item.cid,
+                    page: 1,
+                    from: 'local',
+                    part: item.title ?? '',
+                    duration: item.duration,
+                  );
+
+                  downloadService.downloadVideo(part, null, null, quality);
+                  successCount++;
+                  // 只更新消息，不关闭对话框
+                  SmartDialog.showLoading(
+                    msg: '已添加到下载队列 (${successCount}/${totalCount})',
+                  );
+                  break; // 成功添加到下载队列后跳出质量选择循环
+                } catch (e) {
+                  continue; // 尝试下一个质量
+                }
+              }
+            }
+          }
+        } catch (e) {
+          print('下载视频出错: ${item.title}, 错误: $e');
+          continue;
+        }
+      }
+
+      SmartDialog.dismiss();
+      SmartDialog.showToast('离线任务已添加完成: $successCount/$totalCount');
+    } catch (e) {
+      // 恢复状态
+      next = savedNext;
+      lastAid = savedLastAid;
+      firstAid = savedFirstAid;
+      isLoadPrevious = savedIsLoadPrevious;
+      page = savedPage;
+      
+      SmartDialog.dismiss();
+      SmartDialog.showToast('加载视频列表失败: $e');
     }
   }
 

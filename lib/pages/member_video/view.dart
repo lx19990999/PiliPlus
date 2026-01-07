@@ -222,6 +222,33 @@ class _MemberVideoState extends State<MemberVideo>
                                     : const SizedBox.shrink();
                               },
                             ),
+                            Obx(
+                              () {
+                                final episodicButton =
+                                    _controller.episodicButton.value;
+                                return episodicButton.uri?.isNotEmpty == true
+                                    ? Container(
+                                        height: 35,
+                                        child: TextButton.icon(
+                                          onPressed: _controller.downloadAll,
+                                          icon: Icon(
+                                            Icons.download_outlined,
+                                            size: 16,
+                                            color: theme.colorScheme.secondary,
+                                          ),
+                                          label: Text(
+                                            '离线全部',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color:
+                                                  theme.colorScheme.secondary,
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                    : const SizedBox.shrink();
+                              },
+                            ),
                             const Spacer(),
                             SizedBox(
                               height: 35,
