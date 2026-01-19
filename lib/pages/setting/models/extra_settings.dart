@@ -8,13 +8,15 @@ import 'package:PiliPlus/common/widgets/image/custom_grid_view.dart'
 import 'package:PiliPlus/common/widgets/pendant_avatar.dart';
 import 'package:PiliPlus/grpc/reply.dart';
 import 'package:PiliPlus/http/fav.dart';
+import 'package:PiliPlus/http/loading_state.dart';
 import 'package:PiliPlus/models/common/audio_normalization.dart';
 import 'package:PiliPlus/models/common/dynamic/dynamics_type.dart';
 import 'package:PiliPlus/models/common/member/tab_type.dart';
 import 'package:PiliPlus/models/common/reply/reply_sort_type.dart';
 import 'package:PiliPlus/models/common/sponsor_block/skip_type.dart';
 import 'package:PiliPlus/models/common/super_resolution_type.dart';
-import 'package:PiliPlus/models/dynamics/result.dart';
+import 'package:PiliPlus/models/dynamics/result.dart'
+    show DynamicsDataModel, ItemModulesModel;
 import 'package:PiliPlus/pages/common/slide/common_slide_page.dart';
 import 'package:PiliPlus/pages/home/controller.dart';
 import 'package:PiliPlus/pages/hot/controller.dart';
@@ -27,6 +29,7 @@ import 'package:PiliPlus/plugin/pl_player/controller.dart';
 import 'package:PiliPlus/services/download/download_service.dart';
 import 'package:PiliPlus/utils/accounts.dart';
 import 'package:PiliPlus/utils/cache_manager.dart';
+import 'package:PiliPlus/utils/extension/num_ext.dart';
 import 'package:PiliPlus/utils/feed_back.dart';
 import 'package:PiliPlus/utils/image_utils.dart';
 import 'package:PiliPlus/utils/path_utils.dart';
@@ -143,24 +146,26 @@ List<SettingsModel> get extraSettings => [
           initialValue: pgcSkipType,
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  pgcSkipType.title,
-                  style: TextStyle(fontSize: 14, height: 1, color: color),
-                  strutStyle: const StrutStyle(
-                    leading: 0,
-                    height: 1,
-                    fontSize: 14,
+            child: Text.rich(
+              style: TextStyle(fontSize: 14, height: 1, color: color),
+              strutStyle: const StrutStyle(
+                leading: 0,
+                height: 1,
+                fontSize: 14,
+              ),
+              TextSpan(
+                children: [
+                  TextSpan(text: pgcSkipType.title),
+                  WidgetSpan(
+                    alignment: .middle,
+                    child: Icon(
+                      MdiIcons.unfoldMoreHorizontal,
+                      size: 14,
+                      color: color,
+                    ),
                   ),
-                ),
-                Icon(
-                  MdiIcons.unfoldMoreHorizontal,
-                  size: MediaQuery.textScalerOf(context).scale(14),
-                  color: color,
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           onSelected: (value) async {
@@ -406,6 +411,13 @@ List<SettingsModel> get extraSettings => [
     setKey: SettingBoxKey.showArgueMsg,
     defaultVal: true,
   ),
+  SwitchModel(
+    title: '显示动态警告/争议信息',
+    leading: const Icon(Icons.warning_amber_rounded),
+    setKey: SettingBoxKey.showDynDispute,
+    defaultVal: false,
+    onChanged: (val) => ItemModulesModel.showDynDispute = val,
+  ),
   const SwitchModel(
     title: '分P/合集：倒序播放从首集开始播放',
     subtitle: '开启则自动切换为倒序首集，否则保持当前集',
@@ -426,7 +438,7 @@ List<SettingsModel> get extraSettings => [
     setKey: SettingBoxKey.continuePlayingPart,
     defaultVal: true,
   ),
-  getBanwordModel(
+  getBanWordModel(
     title: '评论关键词过滤',
     key: SettingBoxKey.banWordForReply,
     onChanged: (value) {
@@ -434,7 +446,7 @@ List<SettingsModel> get extraSettings => [
       ReplyGrpc.enableFilter = value.pattern.isNotEmpty;
     },
   ),
-  getBanwordModel(
+  getBanWordModel(
     title: '动态关键词过滤',
     key: SettingBoxKey.banWordForDyn,
     onChanged: (value) {
@@ -639,16 +651,16 @@ List<SettingsModel> get extraSettings => [
     setKey: SettingBoxKey.enableCommAntifraud,
     defaultVal: false,
   ),
-  const SwitchModel(
-    title: '使用「哔哩发评反诈」检查评论',
-    subtitle: '仅对Android生效',
-    leading: Icon(
-      FontAwesomeIcons.b,
-      size: 22,
+  if (Platform.isAndroid)
+    const SwitchModel(
+      title: '使用「哔哩发评反诈」检查评论',
+      leading: Icon(
+        FontAwesomeIcons.b,
+        size: 22,
+      ),
+      setKey: SettingBoxKey.biliSendCommAntifraud,
+      defaultVal: false,
     ),
-    setKey: SettingBoxKey.biliSendCommAntifraud,
-    defaultVal: false,
-  ),
   const SwitchModel(
     title: '发布/转发动态反诈',
     subtitle: '发布/转发动态后检查动态是否可见',
@@ -741,6 +753,13 @@ List<SettingsModel> get extraSettings => [
     onChanged: (value) => ImageUtils.silentDownImg = value,
   ),
   SwitchModel(
+    title: '长按/右键显示图片菜单',
+    leading: const Icon(Icons.menu),
+    setKey: SettingBoxKey.enableImgMenu,
+    defaultVal: false,
+    onChanged: (value) => CustomGridView.enableImgMenu = value,
+  ),
+  SwitchModel(
     setKey: SettingBoxKey.feedBackEnable,
     onChanged: (value) {
       enableFeedback = value;
@@ -789,14 +808,16 @@ List<SettingsModel> get extraSettings => [
     onTap: (context) async {
       if (Accounts.main.isLogin) {
         final res = await FavHttp.allFavFolders(Accounts.main.mid);
-        if (res.isSuccess) {
-          final list = res.data.list;
+        if (res case Success(:final response)) {
+          final list = response.list;
           if (list == null || list.isEmpty) {
             return;
           }
           final quickFavId = Pref.quickFavId;
-          Get.dialog(
-            AlertDialog(
+          if (!context.mounted) return;
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
               clipBehavior: Clip.hardEdge,
               title: const Text('选择默认收藏夹'),
               contentPadding: const EdgeInsets.only(top: 5, bottom: 18),
@@ -921,23 +942,20 @@ List<SettingsModel> get extraSettings => [
   NormalModel(
     title: '评论展示',
     leading: const Icon(Icons.whatshot_outlined),
-    getSubtitle: () =>
-        '当前优先展示「${ReplySortType.values[Pref.replySortType].title}」',
+    getSubtitle: () => '当前优先展示「${Pref.replySortType.title}」',
     onTap: (context, setState) async {
-      final result = await showDialog<int>(
+      final result = await showDialog<ReplySortType>(
         context: context,
         builder: (context) {
-          return SelectDialog<int>(
+          return SelectDialog<ReplySortType>(
             title: '评论展示',
             value: Pref.replySortType,
-            values: ReplySortType.values
-                .map((e) => (e.index, e.title))
-                .toList(),
+            values: ReplySortType.values.map((e) => (e, e.title)).toList(),
           );
         },
       );
       if (result != null) {
-        await GStorage.setting.put(SettingBoxKey.replySortType, result);
+        await GStorage.setting.put(SettingBoxKey.replySortType, result.index);
         setState();
       }
     },
@@ -945,27 +963,37 @@ List<SettingsModel> get extraSettings => [
   NormalModel(
     title: '动态展示',
     leading: const Icon(Icons.dynamic_feed_rounded),
-    getSubtitle: () =>
-        '当前优先展示「${DynamicsTabType.values[Pref.defaultDynamicType].label}」',
+    getSubtitle: () => '当前优先展示「${Pref.defaultDynamicType.label}」',
     onTap: (context, setState) async {
-      final result = await showDialog<int>(
+      final result = await showDialog<DynamicsTabType>(
         context: context,
         builder: (context) {
-          return SelectDialog<int>(
+          return SelectDialog<DynamicsTabType>(
             title: '动态展示',
             value: Pref.defaultDynamicType,
             values: DynamicsTabType.values
                 .take(4)
-                .map((e) => (e.index, e.label))
+                .map((e) => (e, e.label))
                 .toList(),
           );
         },
       );
       if (result != null) {
-        await GStorage.setting.put(SettingBoxKey.defaultDynamicType, result);
+        await GStorage.setting.put(
+          SettingBoxKey.defaultDynamicType,
+          result.index,
+        );
         setState();
       }
     },
+  ),
+  SwitchModel(
+    title: '显示动态互动内容',
+    subtitle: '开启后则在动态卡片底部显示互动内容（如关注的人点赞、热评等）',
+    leading: const Icon(Icons.quickreply_outlined),
+    setKey: SettingBoxKey.showDynInteraction,
+    defaultVal: true,
+    onChanged: (val) => ItemModulesModel.showDynInteraction = val,
   ),
   NormalModel(
     title: '用户页默认展示TAB',

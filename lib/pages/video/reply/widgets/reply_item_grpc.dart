@@ -21,7 +21,7 @@ import 'package:PiliPlus/utils/accounts.dart';
 import 'package:PiliPlus/utils/date_utils.dart';
 import 'package:PiliPlus/utils/duration_utils.dart';
 import 'package:PiliPlus/utils/extension/context_ext.dart';
-import 'package:PiliPlus/utils/extension/string_ext.dart';
+import 'package:PiliPlus/utils/extension/num_ext.dart';
 import 'package:PiliPlus/utils/extension/theme_ext.dart';
 import 'package:PiliPlus/utils/feed_back.dart';
 import 'package:PiliPlus/utils/image_utils.dart';
@@ -36,7 +36,7 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
-import 'package:get/get.dart' hide ContextExtensionss;
+import 'package:get/get.dart';
 
 class ReplyItemGrpc extends StatelessWidget {
   const ReplyItemGrpc({
@@ -99,14 +99,8 @@ class ReplyItemGrpc extends StatelessWidget {
     return Material(
       type: MaterialType.transparency,
       child: InkWell(
-        onTap: () {
-          feedBack();
-          replyReply?.call(replyItem, null);
-        },
-        onLongPress: () {
-          feedBack();
-          showMore();
-        },
+        onTap: () => replyReply?.call(replyItem, null),
+        onLongPress: showMore,
         onSecondaryTap: isMobile ? null : showMore,
         child: _buildContent(context, theme),
       ),
@@ -136,23 +130,25 @@ class ReplyItemGrpc extends StatelessWidget {
                   children: [
                     CachedNetworkImage(
                       height: 38,
-                      imageUrl: replyItem.member.garbCardImage.http2https,
+                      memCacheHeight: 38.cacheSize(context),
+                      imageUrl: ImageUtils.safeThumbnailUrl(
+                        replyItem.member.garbCardImage,
+                      ),
+                      placeholder: (_, _) => const SizedBox.shrink(),
                     ),
                     if (replyItem.member.hasGarbCardNumber())
                       Text(
                         'NO.\n${replyItem.member.garbCardNumber}',
-                        style: replyItem.member.garbCardFanColor.startsWith('#')
-                            ? TextStyle(
-                                fontSize: 8,
-                                fontFamily: 'digital_id_num',
-                                color: Color(
-                                  int.parse(
-                                    replyItem.member.garbCardFanColor
-                                        .replaceFirst('#', '0xFF'),
-                                  ),
-                                ),
-                              )
-                            : null,
+                        style: TextStyle(
+                          fontSize: 8,
+                          fontFamily: 'digital_id_num',
+                          color:
+                              replyItem.member.garbCardFanColor.startsWith('#')
+                              ? Utils.parseColor(
+                                  replyItem.member.garbCardFanColor,
+                                )
+                              : null,
+                        ),
                       ),
                   ],
                 ),
@@ -225,8 +221,12 @@ class ReplyItemGrpc extends StatelessWidget {
                         ),
                       ),
                       Image.asset(
-                        'assets/images/lv/lv${replyItem.member.isSeniorMember == 1 ? '6_s' : replyItem.member.level}.png',
+                        Utils.levelName(
+                          replyItem.member.level,
+                          isSeniorMember: replyItem.member.isSeniorMember == 1,
+                        ),
                         height: 11,
+                        cacheHeight: 11.cacheSize(context),
                       ),
                       if (replyItem.mid == upMid)
                         const PBadge(
@@ -468,10 +468,7 @@ class ReplyItemGrpc extends StatelessWidget {
                 return InkWell(
                   onTap: () =>
                       replyReply?.call(replyItem, childReply.id.toInt()),
-                  onLongPress: () {
-                    feedBack();
-                    showMore();
-                  },
+                  onLongPress: showMore,
                   onSecondaryTap: PlatformUtils.isMobile ? null : showMore,
                   child: Padding(
                     padding: padding,
@@ -613,12 +610,11 @@ class ReplyItemGrpc extends StatelessWidget {
         if (!isCv && url.hasPrefixIcon())
           WidgetSpan(
             child: CachedNetworkImage(
-              imageUrl: ImageUtils.thumbnailUrl(url.prefixIcon),
               height: 19,
+              memCacheHeight: 19.cacheSize(context),
               color: theme.colorScheme.primary,
-              placeholder: (context, url) {
-                return const SizedBox.shrink();
-              },
+              imageUrl: ImageUtils.thumbnailUrl(url.prefixIcon),
+              placeholder: (_, _) => const SizedBox.shrink(),
             ),
           ),
         TextSpan(
@@ -687,7 +683,11 @@ class ReplyItemGrpc extends StatelessWidget {
           spanChildren.add(
             WidgetSpan(
               child: NetworkImgLayer(
-                src: emote.hasGifUrl() ? emote.gifUrl : emote.url,
+                src: emote.hasWebpUrl()
+                    ? emote.webpUrl
+                    : emote.hasGifUrl()
+                    ? emote.gifUrl
+                    : emote.url,
                 type: ImageType.emote,
                 width: size,
                 height: size,
@@ -802,7 +802,7 @@ class ReplyItemGrpc extends StatelessWidget {
           .where((url) => !matchedUrls.contains(url))
           .toList();
       if (unmatchedItems.isNotEmpty) {
-        for (var patternStr in unmatchedItems) {
+        for (final patternStr in unmatchedItems) {
           addUrl(patternStr, content.urls[patternStr]!);
         }
       }
@@ -918,17 +918,17 @@ class ReplyItemGrpc extends StatelessWidget {
                   return;
                 }
                 SmartDialog.showLoading(msg: '删除中...');
-                var result = await VideoHttp.replyDel(
+                final res = await VideoHttp.replyDel(
                   type: item.type.toInt(),
                   oid: item.oid.toInt(),
                   rpid: item.id.toInt(),
                 );
                 SmartDialog.dismiss();
-                if (result.isSuccess) {
+                if (res.isSuccess) {
                   SmartDialog.showToast('删除成功');
                   onDelete();
                 } else {
-                  SmartDialog.showToast('删除失败, $result');
+                  SmartDialog.showToast('删除失败, $res');
                 }
               },
               minLeadingWidth: 0,
@@ -990,15 +990,8 @@ class ReplyItemGrpc extends StatelessWidget {
                 context: context,
                 builder: (context) {
                   return Dialog(
-                    constraints: const BoxConstraints(
-                      minWidth: 280,
-                      maxWidth: 425,
-                    ),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 16,
-                      ),
+                      padding: const .symmetric(horizontal: 20, vertical: 16),
                       child: SelectableText(
                         message,
                         style: const TextStyle(fontSize: 15, height: 1.7),

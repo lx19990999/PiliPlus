@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' show min;
 import 'dart:ui';
 
+import 'package:PiliPlus/common/constants.dart';
 import 'package:PiliPlus/common/widgets/pair.dart';
 import 'package:PiliPlus/common/widgets/progress_bar/segment_progress_bar.dart';
 import 'package:PiliPlus/grpc/bilibili/app/listener/v1.pbenum.dart'
@@ -39,6 +40,7 @@ import 'package:PiliPlus/models_new/video/video_pbp/data.dart';
 import 'package:PiliPlus/models_new/video/video_play_info/subtitle.dart';
 import 'package:PiliPlus/models_new/video/video_stein_edgeinfo/data.dart';
 import 'package:PiliPlus/pages/audio/view.dart';
+import 'package:PiliPlus/pages/common/publish/publish_route.dart';
 import 'package:PiliPlus/pages/search/widgets/search_text.dart';
 import 'package:PiliPlus/pages/video/download_panel/view.dart';
 import 'package:PiliPlus/pages/video/introduction/pgc/controller.dart';
@@ -57,6 +59,7 @@ import 'package:PiliPlus/utils/accounts.dart';
 import 'package:PiliPlus/utils/duration_utils.dart';
 import 'package:PiliPlus/utils/extension/context_ext.dart';
 import 'package:PiliPlus/utils/extension/iterable_ext.dart';
+import 'package:PiliPlus/utils/extension/num_ext.dart';
 import 'package:PiliPlus/utils/extension/size_ext.dart';
 import 'package:PiliPlus/utils/page_utils.dart';
 import 'package:PiliPlus/utils/platform_utils.dart';
@@ -70,8 +73,7 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:flutter_volume_controller/flutter_volume_controller.dart';
-import 'package:get/get.dart' hide ContextExtensionss;
-import 'package:get/get_navigation/src/dialog/dialog_route.dart';
+import 'package:get/get.dart';
 import 'package:hive/hive.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:media_kit/media_kit.dart';
@@ -164,8 +166,9 @@ class VideoDetailController extends GetxController
   late final scrollKey = GlobalKey<ExtendedNestedScrollViewState>();
   late final RxBool isVertical = false.obs;
   late final RxDouble scrollRatio = 0.0.obs;
-  late final ScrollController scrollCtr = ScrollController()
-    ..addListener(scrollListener);
+  ScrollController? _scrollCtr;
+  ScrollController get scrollCtr =>
+      _scrollCtr ??= ScrollController()..addListener(scrollListener);
   late bool isExpanding = false;
   late bool isCollapsing = false;
   AnimationController? animController;
@@ -215,9 +218,7 @@ class VideoDetailController extends GetxController
           } else {
             // current maxVideoHeight
             final currentHeight = (maxVideoHeight - scrollCtr.offset)
-                .toPrecision(
-                  2,
-                );
+                .toPrecision(2);
             double minVideoHeightPrecise = minVideoHeight.toPrecision(2);
             if (currentHeight == minVideoHeightPrecise) {
               isExpanding = true;
@@ -352,7 +353,7 @@ class VideoDetailController extends GetxController
     if (!isReverse && count != null && mediaList.length >= count) {
       return;
     }
-    var res = await UserHttp.getMediaList(
+    final res = await UserHttp.getMediaList(
       type: args['mediaType'] ?? sourceType.mediaType,
       bizId: args['mediaId'] ?? -1,
       ps: 20,
@@ -383,7 +384,7 @@ class VideoDetailController extends GetxController
       if (response.mediaList.isNotEmpty) {
         if (isReverse) {
           mediaList.value = response.mediaList;
-          for (var item in mediaList) {
+          for (final item in mediaList) {
             if (item.cid != null) {
               try {
                 Get.find<UgcIntroController>(
@@ -431,15 +432,14 @@ class VideoDetailController extends GetxController
                 (sourceType == SourceType.fav && args['isOwner'] == true)
             ? (item, index) async {
                 if (sourceType == SourceType.watchLater) {
-                  var res = await UserHttp.toViewDel(
+                  final res = await UserHttp.toViewDel(
                     aids: item.aid.toString(),
                   );
-                  if (res['status']) {
+                  if (res.isSuccess) {
                     mediaList.removeAt(index);
                   }
-                  SmartDialog.showToast(res['msg']);
                 } else {
-                  var res = await FavHttp.favVideo(
+                  final res = await FavHttp.favVideo(
                     resources: '${item.aid}:${item.type}',
                     delIds: '${args['mediaId']}',
                   );
@@ -838,7 +838,11 @@ class VideoDetailController extends GetxController
           segmentList.map((e) {
             double start = (e.segment.first / duration).clamp(0.0, 1.0);
             double end = (e.segment.second / duration).clamp(0.0, 1.0);
-            return Segment(start, end, _getColor(e.segmentType));
+            return Segment(
+              start: start,
+              end: end,
+              color: _getColor(e.segmentType),
+            );
           }),
         );
 
@@ -854,6 +858,7 @@ class VideoDetailController extends GetxController
   }
 
   void initSkip() {
+    if (isClosed) return;
     if (segmentList.isNotEmpty) {
       positionSubscription?.cancel();
       positionSubscription = plPlayerController
@@ -1028,7 +1033,7 @@ class VideoDetailController extends GetxController
       await plPlayerController.pause();
     }
     await Get.key.currentState!.push(
-      GetDialogRoute(
+      PublishRoute(
         pageBuilder: (buildContext, animation, secondaryAnimation) {
           return SendDanmakuPanel(
             cid: cid.value,
@@ -1043,18 +1048,6 @@ class VideoDetailController extends GetxController
             darkVideoPage: plPlayerController.darkVideoPage,
             dmConfig: dmConfig,
             onSaveDmConfig: (dmConfig) => this.dmConfig = dmConfig,
-          );
-        },
-        transitionDuration: const Duration(milliseconds: 500),
-        transitionBuilder: (context, animation, secondaryAnimation, child) {
-          return SlideTransition(
-            position: animation.drive(
-              Tween(
-                begin: const Offset(0.0, 1.0),
-                end: Offset.zero,
-              ).chain(CurveTween(curve: Curves.linear)),
-            ),
-            child: child,
           );
         },
       ),
@@ -1077,7 +1070,7 @@ class VideoDetailController extends GetxController
     ).codes;
 
     VideoItem? video;
-    for (var i in videoList) {
+    for (final i in videoList) {
       final codec = i.codecs!;
       if (currentDecodeFormats.any(codec.startsWith)) {
         video = i;
@@ -1171,11 +1164,11 @@ class VideoDetailController extends GetxController
       seasonId: isUgc ? null : seasonId,
       pgcType: isUgc ? null : pgcType,
       videoType: videoType,
-      onInit: () async {
+      onInit: () {
         if (videoState.value is! Success) {
           videoState.value = const Success(null);
         }
-        await setSubtitle(vttSubtitlesIndex.value);
+        setSubtitle(vttSubtitlesIndex.value);
       },
       width: firstVideo.width,
       height: firstVideo.height,
@@ -1184,6 +1177,8 @@ class VideoDetailController extends GetxController
       typeTag: isFileSource ? entry.typeTag : null,
       mediaType: isFileSource ? entry.mediaType : null,
     );
+
+    if (isClosed) return;
 
     if (!isFileSource) {
       if (plPlayerController.enableBlock) {
@@ -1244,7 +1239,7 @@ class VideoDetailController extends GetxController
             : Pref.defaultAudioQaCellular;
     }
 
-    var result = await VideoHttp.videoUrl(
+    final result = await VideoHttp.videoUrl(
       cid: cid.value,
       bvid: bvid,
       epid: epId,
@@ -1254,8 +1249,8 @@ class VideoDetailController extends GetxController
       language: currLang.value,
     );
 
-    if (result.isSuccess) {
-      data = result.data;
+    if (result case Success(:final response)) {
+      data = response;
 
       languages.value = data.language?.items;
       currLang.value = data.curLanguage;
@@ -1462,7 +1457,7 @@ class VideoDetailController extends GetxController
   late final Map<int, String> vttSubtitles = {};
   late final RxInt vttSubtitlesIndex = (-1).obs;
   late final RxBool showVP = true.obs;
-  late final RxList<Segment> viewPointList = <Segment>[].obs;
+  late final RxList<ViewPointSegment> viewPointList = <ViewPointSegment>[].obs;
 
   // 设定字幕轨道
   Future<void> setSubtitle(int index) async {
@@ -1490,10 +1485,10 @@ class VideoDetailController extends GetxController
     if (subtitle != null) {
       await setSub(subtitle);
     } else {
-      var result = await VideoHttp.vttSubtitles(
+      final result = await VideoHttp.vttSubtitles(
         subtitles[index - 1].subtitleUrl!,
       );
-      if (result != null) {
+      if (!isClosed && result != null) {
         vttSubtitles[index - 1] = result;
         await setSub(result);
       }
@@ -1508,7 +1503,7 @@ class VideoDetailController extends GetxController
   Future<void> getSteinEdgeInfo([int? edgeId]) async {
     steinEdgeInfo = null;
     try {
-      var res = await Request().get(
+      final res = await Request().get(
         '/x/stein/edgeinfo_v2',
         queryParameters: {
           'bvid': bvid,
@@ -1536,7 +1531,7 @@ class VideoDetailController extends GetxController
     if (plPlayerController.showViewPoints) {
       viewPointList.clear();
     }
-    var res = await VideoHttp.playInfo(
+    final res = await VideoHttp.playInfo(
       bvid: bvid,
       cid: cid.value,
       seasonId: seasonId,
@@ -1584,14 +1579,13 @@ class VideoDetailController extends GetxController
               0.0,
               1.0,
             );
-            return Segment(
-              start,
-              start,
-              Colors.black.withValues(alpha: 0.5),
-              item.content,
-              item.imgUrl,
-              item.from,
-              item.to,
+            return ViewPointSegment(
+              start: start,
+              end: start,
+              title: item.content,
+              url: item.imgUrl,
+              from: item.from,
+              to: item.to,
             );
           }).toList();
         } catch (_) {}
@@ -1600,8 +1594,7 @@ class VideoDetailController extends GetxController
       if (response.subtitle?.subtitles?.isNotEmpty == true) {
         subtitles.value = response.subtitle!.subtitles!;
 
-        final idx = switch (SubtitlePrefType.values[Pref
-            .subtitlePreferenceV2]) {
+        final idx = switch (Pref.subtitlePreferenceV2) {
           SubtitlePrefType.off => 0,
           SubtitlePrefType.on => 1,
           SubtitlePrefType.withoutAi =>
@@ -1656,14 +1649,18 @@ class VideoDetailController extends GetxController
 
   @override
   void onClose() {
+    cancelSkipTimer();
+    positionSubscription?.cancel();
+    positionSubscription = null;
+    cid.close();
     if (isFileSource) {
       cacheLocalProgress();
     }
     introScrollCtr?.dispose();
     introScrollCtr = null;
     tabCtr.dispose();
-    scrollCtr
-      ..removeListener(scrollListener)
+    _scrollCtr
+      ?..removeListener(scrollListener)
       ..dispose();
     animController?.dispose();
     super.onClose();
@@ -1732,7 +1729,7 @@ class VideoDetailController extends GetxController
   Future<void> _getDmTrend() async {
     dmTrend.value = LoadingState<List<double>>.loading();
     try {
-      var res = await Request().get(
+      final res = await Request().get(
         'https://bvc.bilivideo.com/pbp/data',
         queryParameters: {
           'bvid': bvid,
@@ -1800,7 +1797,7 @@ class VideoDetailController extends GetxController
   bool onSkipSegment() {
     try {
       if (plPlayerController.enableBlock) {
-        if (listData.lastOrNull case SegmentModel item) {
+        if (listData.lastOrNull case final SegmentModel item) {
           onSkip(item, isSeek: false);
           onRemoveItem(listData.indexOf(item), item);
           return true;
@@ -1890,34 +1887,39 @@ class VideoDetailController extends GetxController
       final index = episodes.indexWhere(
         (e) => e.cid == (seasonCid ?? cid.value),
       );
-      final size = context.mediaQuerySize;
-      final maxChildSize = PlatformUtils.isMobile && !size.isPortrait
-          ? 1.0
-          : 0.7;
+
       showModalBottomSheet(
         context: context,
         useSafeArea: true,
         isScrollControlled: true,
-        constraints: BoxConstraints(maxWidth: min(640, size.shortestSide)),
-        builder: (context) => DraggableScrollableSheet(
-          snap: true,
-          expand: false,
-          minChildSize: 0,
-          snapSizes: [maxChildSize],
-          maxChildSize: maxChildSize,
-          initialChildSize: maxChildSize,
-          builder: (context, scrollController) => DownloadPanel(
-            index: index,
-            videoDetail: videoDetail,
-            pgcItem: pgcItem,
-            episodes: episodes!,
-            scrollController: scrollController,
-            videoDetailController: this,
-            heroTag: heroTag,
-            ugcIntroController: ugcIntroController,
-            cidSet: cidSet,
-          ),
+        constraints: BoxConstraints(
+          maxWidth: min(640, context.mediaQueryShortestSide),
         ),
+        builder: (context) {
+          final maxChildSize =
+              PlatformUtils.isMobile && !context.mediaQuerySize.isPortrait
+              ? 1.0
+              : 0.7;
+          return DraggableScrollableSheet(
+            snap: true,
+            expand: false,
+            minChildSize: 0,
+            snapSizes: [maxChildSize],
+            maxChildSize: maxChildSize,
+            initialChildSize: maxChildSize,
+            builder: (context, scrollController) => DownloadPanel(
+              index: index,
+              videoDetail: videoDetail,
+              pgcItem: pgcItem,
+              episodes: episodes!,
+              scrollController: scrollController,
+              videoDetailController: this,
+              heroTag: heroTag,
+              ugcIntroController: ugcIntroController,
+              cidSet: cidSet,
+            ),
+          );
+        },
       );
     }
   }
@@ -1942,7 +1944,7 @@ class VideoDetailController extends GetxController
     showDialog(
       context: Get.context!,
       builder: (context) => AlertDialog(
-        constraints: const BoxConstraints(maxWidth: 425, minWidth: 425),
+        constraints: StyleString.dialogFixedConstraints,
         title: const Text('播放地址'),
         content: Column(
           spacing: 20,
@@ -1986,9 +1988,8 @@ class VideoDetailController extends GetxController
       qn: currentVideoQa.value?.code,
     );
     SmartDialog.dismiss();
-    if (res.isSuccess) {
-      final data = res.data;
-      final first = data.durl?.firstOrNull;
+    if (res case Success(:final response)) {
+      final first = response.durl?.firstOrNull;
       if (first == null || first.playUrls.isEmpty) {
         SmartDialog.showToast('不支持投屏');
         return;

@@ -52,7 +52,7 @@ class _LiveEmotePanelState extends State<LiveEmotePanel>
     );
     return switch (loadingState) {
       Loading() => loadingWidget,
-      Success(:var response) =>
+      Success(:final response) =>
         response != null && response.isNotEmpty
             ? Column(
                 children: [
@@ -75,6 +75,7 @@ class _LiveEmotePanelState extends State<LiveEmotePanel>
                           final width = widthFac * 38;
                           final height = heightFac * 38;
                           return GridView.builder(
+                            physics: const ClampingScrollPhysics(),
                             padding: const EdgeInsets.only(
                               left: 12,
                               right: 12,
@@ -104,9 +105,9 @@ class _LiveEmotePanelState extends State<LiveEmotePanel>
                                     }
                                   },
                                   child: CustomTooltip(
-                                    indicator: () => CustomPaint(
+                                    indicator: () => Triangle(
+                                      color: color,
                                       size: const Size(14, 8),
-                                      painter: TrianglePainter(color),
                                     ),
                                     overlayWidget: () => Container(
                                       padding: const EdgeInsets.all(8),
@@ -125,7 +126,7 @@ class _LiveEmotePanelState extends State<LiveEmotePanel>
                                             width: 65,
                                             height: 65,
                                             type: ImageType.emote,
-                                            boxFit: BoxFit.contain,
+                                            fit: BoxFit.contain,
                                           ),
                                           Text(
                                             e.emoji == null
@@ -146,7 +147,7 @@ class _LiveEmotePanelState extends State<LiveEmotePanel>
                                     child: Padding(
                                       padding: const EdgeInsets.all(6),
                                       child: NetworkImgLayer(
-                                        boxFit: BoxFit.contain,
+                                        fit: BoxFit.contain,
                                         src: e.url,
                                         width: width,
                                         height: height,
@@ -191,7 +192,7 @@ class _LiveEmotePanelState extends State<LiveEmotePanel>
                 ],
               )
             : _errorWidget(),
-      Error(:var errMsg) => _errorWidget(errMsg),
+      Error(:final errMsg) => _errorWidget(errMsg),
     };
   }
 

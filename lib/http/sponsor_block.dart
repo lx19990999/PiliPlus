@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:PiliPlus/build_config.dart';
 import 'package:PiliPlus/common/constants.dart';
 import 'package:PiliPlus/http/init.dart';
 import 'package:PiliPlus/http/loading_state.dart';
@@ -17,6 +18,11 @@ abstract final class SponsorBlock {
   static String get blockServer => Pref.blockServer;
   static final options = Options(
     followRedirects: true,
+    // https://github.com/hanydd/BilibiliSponsorBlock/wiki/API#1-%E5%85%AC%E7%94%A8%E5%8F%82%E6%95%B0
+    headers: {
+      'origin': Constants.appName,
+      'x-ext-version': BuildConfig.versionName,
+    },
     validateStatus: (status) => true,
   );
 
@@ -58,7 +64,7 @@ abstract final class SponsorBlock {
     );
 
     if (res.statusCode == 200) {
-      if (res.data case List list) {
+      if (res.data case final List list) {
         return Success(list.map((i) => SegmentItemModel.fromJson(i)).toList());
       }
     }
@@ -73,7 +79,7 @@ abstract final class SponsorBlock {
     assert((type == null) == (category == null));
     final res = await Request().post(
       _api(SponsorBlockApi.voteOnSponsorTime),
-      data: {
+      queryParameters: {
         'UUID': uuid,
         'type': ?type,
         'category': ?category?.name,
@@ -136,7 +142,7 @@ abstract final class SponsorBlock {
         'videoID': bvid,
         'cid': cid.toString(),
         'userID': Pref.blockUserID,
-        'userAgent': Constants.userAgent,
+        'userAgent': '${Constants.appName}/${BuildConfig.versionName}',
         'videoDuration': videoDuration,
         'segments': segments
             .map(
@@ -152,7 +158,7 @@ abstract final class SponsorBlock {
     );
 
     if (res.statusCode == 200) {
-      if (res.data case List list) {
+      if (res.data case final List list) {
         return Success(list.map((i) => SegmentItemModel.fromJson(i)).toList());
       }
     }
@@ -182,7 +188,7 @@ abstract final class SponsorBlock {
     );
 
     if (res.statusCode == 200) {
-      if (res.data case Map<String, dynamic> data) {
+      if (res.data case final Map<String, dynamic> data) {
         if (data['ytbID'] case String ytbId) {
           return Success(ytbId);
         }
@@ -210,7 +216,7 @@ abstract final class SponsorBlock {
     );
 
     if (res.statusCode == 200) {
-      if (res.data case Map<String, dynamic> data) {
+      if (res.data case final Map<String, dynamic> data) {
         if (data['UUID'] case String uuid) {
           return Success(uuid);
         }

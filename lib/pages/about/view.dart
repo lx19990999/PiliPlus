@@ -13,6 +13,7 @@ import 'package:PiliPlus/utils/accounts/account.dart';
 import 'package:PiliPlus/utils/cache_manager.dart';
 import 'package:PiliPlus/utils/date_utils.dart';
 import 'package:PiliPlus/utils/extension/context_ext.dart';
+import 'package:PiliPlus/utils/extension/num_ext.dart';
 import 'package:PiliPlus/utils/login_utils.dart';
 import 'package:PiliPlus/utils/page_utils.dart';
 import 'package:PiliPlus/utils/platform_utils.dart';
@@ -22,7 +23,7 @@ import 'package:PiliPlus/utils/utils.dart';
 import 'package:flutter/material.dart' hide ListTile;
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
-import 'package:get/get.dart' hide ContextExtensionss;
+import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:re_highlight/languages/json.dart';
@@ -64,6 +65,24 @@ class _AboutPageState extends State<AboutPage> {
     );
   }
 
+  void _showDialog() => showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        constraints: StyleString.dialogFixedConstraints,
+        content: TextField(
+          autofocus: true,
+          onSubmitted: (value) {
+            Get.back();
+            if (value.isNotEmpty) {
+              PageUtils.handleWebview(value, inApp: true);
+            }
+          },
+        ),
+      );
+    },
+  );
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -87,28 +106,15 @@ class _AboutPageState extends State<AboutPage> {
               _pressCount++;
               if (_pressCount == 5) {
                 _pressCount = 0;
-                showDialog(
-                  context: context,
-                  builder: (context) {
-                    return AlertDialog(
-                      content: TextField(
-                        autofocus: true,
-                        onSubmitted: (value) {
-                          Get.back();
-                          if (value.isNotEmpty) {
-                            PageUtils.handleWebview(value, inApp: true);
-                          }
-                        },
-                      ),
-                    );
-                  },
-                );
+                _showDialog();
               }
             },
+            onSecondaryTap: PlatformUtils.isDesktop ? _showDialog : null,
             child: ExcludeSemantics(
               child: Image.asset(
                 width: 150,
                 height: 150,
+                cacheWidth: 150.cacheSize(context),
                 'assets/images/logo/logo.png',
               ),
             ),
@@ -451,10 +457,7 @@ Future<void> showImportExportDialog<T>(
               builder: (context) {
                 return AlertDialog(
                   title: Text('输入$title'),
-                  constraints: const BoxConstraints(
-                    minWidth: 420,
-                    maxWidth: 420,
-                  ),
+                  constraints: StyleString.dialogFixedConstraints,
                   content: TextFormField(
                     key: key,
                     minLines: 4,

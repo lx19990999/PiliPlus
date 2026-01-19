@@ -13,12 +13,13 @@ import 'package:PiliPlus/utils/page_utils.dart';
 import 'package:PiliPlus/utils/storage.dart';
 import 'package:PiliPlus/utils/storage_key.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
+import 'package:PiliPlus/utils/utils.dart';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show FilteringTextInputFormatter;
 import 'package:get/get.dart';
 import 'package:hive/hive.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
-import 'package:uuid/uuid.dart';
 
 class SponsorBlockPage extends StatefulWidget {
   const SponsorBlockPage({super.key});
@@ -179,7 +180,9 @@ class _SponsorBlockPageState extends State<SponsorBlockPage> {
                   TextButton(
                     onPressed: () {
                       Get.back();
-                      _userId = const Uuid().v4().replaceAll('-', '');
+                      _userId = Digest(
+                        List.generate(16, (_) => Utils.random.nextInt(256)),
+                      ).toString();
                       setting.put(SettingBoxKey.blockUserID, _userId);
                       (context as Element).markNeedsBuild();
                     },
@@ -597,32 +600,38 @@ class _SponsorBlockPageState extends State<SponsorBlockPage> {
                         .toList(),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            item.second.title,
-                            style: TextStyle(
-                              height: 1,
-                              fontSize: 14,
-                              color: isDisable
-                                  ? theme.colorScheme.outline.withValues(
-                                      alpha: 0.7,
-                                    )
-                                  : theme.colorScheme.secondary,
+                      child: Text.rich(
+                        style: TextStyle(
+                          height: 1,
+                          fontSize: 14,
+                          color: isDisable
+                              ? theme.colorScheme.outline.withValues(
+                                  alpha: 0.7,
+                                )
+                              : theme.colorScheme.secondary,
+                        ),
+                        strutStyle: const StrutStyle(
+                          height: 1,
+                          leading: 0,
+                          fontSize: 14,
+                        ),
+                        TextSpan(
+                          children: [
+                            TextSpan(text: item.second.title),
+                            WidgetSpan(
+                              alignment: .middle,
+                              child: Icon(
+                                size: 14,
+                                MdiIcons.unfoldMoreHorizontal,
+                                color: isDisable
+                                    ? theme.colorScheme.outline.withValues(
+                                        alpha: 0.7,
+                                      )
+                                    : theme.colorScheme.secondary,
+                              ),
                             ),
-                            strutStyle: const StrutStyle(height: 1, leading: 0),
-                          ),
-                          Icon(
-                            MdiIcons.unfoldMoreHorizontal,
-                            size: MediaQuery.textScalerOf(context).scale(14),
-                            color: isDisable
-                                ? theme.colorScheme.outline.withValues(
-                                    alpha: 0.7,
-                                  )
-                                : theme.colorScheme.secondary,
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   );

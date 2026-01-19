@@ -6,9 +6,9 @@ import 'package:PiliPlus/grpc/url.dart';
 import 'package:PiliPlus/http/loading_state.dart';
 import 'package:fixnum/fixnum.dart';
 import 'package:protobuf/protobuf.dart' show PbMap;
-import 'package:uuid/uuid.dart';
+import 'package:uuid/v4.dart';
 
-class ImGrpc {
+abstract final class ImGrpc {
   static Future<LoadingState<RspSendMsg>> sendMsg({
     required int senderUid,
     required int receiverId,
@@ -28,7 +28,7 @@ class ImGrpc {
           msgStatus: 0,
           newFaceVersion: 1,
         ),
-        devId: const Uuid().v4(),
+        devId: const UuidV4().generate(),
       ),
       RspSendMsg.fromBuffer,
     );

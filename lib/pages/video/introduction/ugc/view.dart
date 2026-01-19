@@ -7,6 +7,7 @@ import 'package:PiliPlus/common/widgets/stat/stat.dart';
 import 'package:PiliPlus/http/sponsor_block.dart';
 import 'package:PiliPlus/models/common/image_type.dart';
 import 'package:PiliPlus/models/common/stat_type.dart';
+import 'package:PiliPlus/models_new/video/video_ai_conclusion/model_result.dart';
 import 'package:PiliPlus/models_new/video/video_detail/data.dart';
 import 'package:PiliPlus/models_new/video/video_detail/staff.dart';
 import 'package:PiliPlus/models_new/video/video_tag/data.dart';
@@ -23,6 +24,7 @@ import 'package:PiliPlus/utils/date_utils.dart';
 import 'package:PiliPlus/utils/duration_utils.dart';
 import 'package:PiliPlus/utils/extension/get_ext.dart';
 import 'package:PiliPlus/utils/extension/iterable_ext.dart';
+import 'package:PiliPlus/utils/extension/num_ext.dart';
 import 'package:PiliPlus/utils/extension/string_ext.dart';
 import 'package:PiliPlus/utils/extension/theme_ext.dart';
 import 'package:PiliPlus/utils/feed_back.dart';
@@ -37,7 +39,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:get/get.dart' hide ContextExtensionss;
+import 'package:get/get.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 
 class UgcIntroPanel extends StatefulWidget {
@@ -209,13 +211,15 @@ class _UgcIntroPanelState extends State<UgcIntroPanel> {
                         children: [
                           WidgetSpan(
                             alignment: PlaceholderAlignment.middle,
-                            child: Icon(
-                              size: 13,
-                              Icons.error_outline,
-                              color: theme.colorScheme.outline,
+                            child: Padding(
+                              padding: const .only(right: 2),
+                              child: Icon(
+                                size: 13,
+                                Icons.error_outline,
+                                color: theme.colorScheme.outline,
+                              ),
                             ),
                           ),
-                          const WidgetSpan(child: SizedBox(width: 2)),
                           TextSpan(
                             text: '${videoDetail.argueInfo!.argueMsg}',
                           ),
@@ -777,6 +781,9 @@ class _UgcIntroPanelState extends State<UgcIntroPanel> {
     int? ownerMid,
     Staff item,
   ) {
+    void onTap() => Get.toNamed(
+      '/member?mid=${item.mid}&from_view_aid=${videoDetailCtr.aid}',
+    );
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () {
@@ -785,11 +792,13 @@ class _UgcIntroPanelState extends State<UgcIntroPanel> {
             introController.horizontalMemberPage) {
           widget.onShowMemberPage(ownerMid);
         } else {
-          Get.toNamed(
-            '/member?mid=${item.mid}&from_view_aid=${videoDetailCtr.aid}',
-          );
+          onTap();
         }
       },
+      onSecondaryTap:
+          PlatformUtils.isDesktop && introController.horizontalMemberPage
+          ? onTap
+          : null,
       child: Row(
         children: [
           Stack(
@@ -897,6 +906,12 @@ class _UgcIntroPanelState extends State<UgcIntroPanel> {
   ) => GestureDetector(
     onTap: onPushMember,
     behavior: HitTestBehavior.opaque,
+    onSecondaryTap:
+        PlatformUtils.isDesktop && introController.horizontalMemberPage
+        ? () => Get.toNamed(
+            '/member?mid=${introController.userStat.value.card?.mid}&from_view_aid=${videoDetailCtr.aid}',
+          )
+        : null,
     child: Obx(
       () {
         final userStat = introController.userStat.value;
@@ -991,9 +1006,11 @@ class _UgcIntroPanelState extends State<UgcIntroPanel> {
           if (introController.aiConclusionResult == null) {
             await introController.aiConclusion();
           }
-          if (introController.aiConclusionResult case final res?) {
-            if (res.summary?.isNotEmpty == true ||
-                res.outline?.isNotEmpty == true) {
+          if (introController.aiConclusionResult case AiConclusionResult(
+            :final summary,
+            :final outline,
+          )) {
+            if (summary?.isNotEmpty == true || outline?.isNotEmpty == true) {
               widget.showAiBottomSheet();
             } else {
               SmartDialog.showToast("当前视频不支持AI视频总结");
@@ -1005,6 +1022,7 @@ class _UgcIntroPanelState extends State<UgcIntroPanel> {
           'assets/images/ai.png',
           height: 18,
           width: 18,
+          cacheHeight: 18.cacheSize(context),
         ),
       ),
     ),

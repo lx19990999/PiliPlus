@@ -3,6 +3,7 @@ import 'package:PiliPlus/common/widgets/flutter/draggable_sheet/draggable_scroll
 import 'package:PiliPlus/common/widgets/flutter/text_field/text_field.dart';
 import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
 import 'package:PiliPlus/http/dynamics.dart';
+import 'package:PiliPlus/http/loading_state.dart';
 import 'package:PiliPlus/models/common/publish_panel_type.dart';
 import 'package:PiliPlus/models/dynamics/result.dart';
 import 'package:PiliPlus/pages/common/publish/common_rich_text_pub_page.dart';
@@ -169,10 +170,12 @@ class _RepostPanelState extends CommonRichTextPubPageState<RepostPanel> {
         children: [
           if (_pic != null) ...[
             NetworkImgLayer(
-              radius: 6,
               width: 40,
               height: 40,
               src: _pic,
+              borderRadius: const BorderRadius.all(
+                Radius.circular(6),
+              ),
             ),
             const SizedBox(width: 10),
           ],
@@ -417,7 +420,7 @@ class _RepostPanelState extends CommonRichTextPubPageState<RepostPanel> {
     if (hasRichText && repostContent != null) {
       richContent.addAll(repostContent);
     }
-    var result = await DynamicsHttp.createDynamic(
+    final res = await DynamicsHttp.createDynamic(
       mid: Accounts.main.mid,
       dynIdStr: widget.item?.idStr ?? widget.dynIdStr,
       rid: widget.rid,
@@ -426,19 +429,19 @@ class _RepostPanelState extends CommonRichTextPubPageState<RepostPanel> {
       extraContent: richContent ?? repostContent,
     );
     SmartDialog.dismiss();
-    if (result['status']) {
+    if (res case Success(:final response)) {
       hasPub = true;
       Get.back();
       SmartDialog.showToast('转发成功');
       widget.onSuccess?.call();
-      var id = result['data']?['dyn_id'];
+      final id = response?['dyn_id'];
       RequestUtils.insertCreatedDyn(id);
       RequestUtils.checkCreatedDyn(
         id: id,
         dynText: editController.rawText,
       );
     } else {
-      SmartDialog.showToast(result['msg']);
+      res.toast();
     }
   }
 

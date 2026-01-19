@@ -36,12 +36,11 @@ mixin BaseLaterController
         final res = await UserHttp.toViewDel(
           aids: removeList.map((item) => item.aid).join(','),
         );
-        if (res['status']) {
+        if (res.isSuccess) {
           updateCount?.call(removeList.length);
           afterDelete(removeList);
         }
         SmartDialog.dismiss();
-        SmartDialog.showToast(res['msg']);
       },
     );
   }
@@ -70,13 +69,12 @@ mixin BaseLaterController
               onPressed: () async {
                 Get.back();
                 final res = await UserHttp.toViewDel(aids: aid.toString());
-                if (res['status']) {
+                if (res.isSuccess) {
                   loadingState
                     ..value.data!.removeAt(index)
                     ..refresh();
                   updateCount?.call(1);
                 }
-                SmartDialog.showToast(res['msg']);
               },
               child: const Text('确认移除'),
             ),
@@ -142,7 +140,7 @@ class LaterController extends MultiSelectController<LaterData, LaterItemModel>
       title: '确认',
       content: content,
       onConfirm: () async {
-        var res = await UserHttp.toViewClear(cleanType);
+        final res = await UserHttp.toViewClear(cleanType);
         if (res.isSuccess) {
           onReload();
           final restTypes = List<LaterViewType>.from(LaterViewType.values)

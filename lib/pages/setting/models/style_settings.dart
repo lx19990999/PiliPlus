@@ -1,16 +1,19 @@
 import 'dart:io';
 import 'dart:math';
 
+import 'package:PiliPlus/common/widgets/color_palette.dart';
 import 'package:PiliPlus/common/widgets/custom_toast.dart';
 import 'package:PiliPlus/common/widgets/dialog/dialog.dart';
 import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
-import 'package:PiliPlus/common/widgets/scroll_physics.dart';
+import 'package:PiliPlus/common/widgets/scale_app.dart';
+import 'package:PiliPlus/common/widgets/stateful_builder.dart';
 import 'package:PiliPlus/main.dart';
 import 'package:PiliPlus/models/common/dynamic/dynamic_badge_mode.dart';
 import 'package:PiliPlus/models/common/dynamic/up_panel_position.dart';
 import 'package:PiliPlus/models/common/home_tab_type.dart';
 import 'package:PiliPlus/models/common/msg/msg_unread_type.dart';
 import 'package:PiliPlus/models/common/nav_bar_config.dart';
+import 'package:PiliPlus/models/common/theme/theme_color_type.dart';
 import 'package:PiliPlus/models/common/theme/theme_type.dart';
 import 'package:PiliPlus/pages/main/controller.dart';
 import 'package:PiliPlus/pages/mine/controller.dart';
@@ -22,13 +25,16 @@ import 'package:PiliPlus/pages/setting/widgets/multi_select_dialog.dart';
 import 'package:PiliPlus/pages/setting/widgets/select_dialog.dart';
 import 'package:PiliPlus/pages/setting/widgets/slide_dialog.dart';
 import 'package:PiliPlus/plugin/pl_player/utils/fullscreen.dart';
+import 'package:PiliPlus/utils/extension/get_ext.dart';
+import 'package:PiliPlus/utils/extension/num_ext.dart';
+import 'package:PiliPlus/utils/extension/theme_ext.dart';
 import 'package:PiliPlus/utils/global_data.dart';
 import 'package:PiliPlus/utils/platform_utils.dart';
 import 'package:PiliPlus/utils/storage.dart';
 import 'package:PiliPlus/utils/storage_key.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
 import 'package:auto_orientation/auto_orientation.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide StatefulBuilder;
 import 'package:flutter/services.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
@@ -104,6 +110,12 @@ List<SettingsModel> get styleSettings => [
     onChanged: (value) {
       Get.forceAppUpdate();
     },
+  ),
+  NormalModel(
+    title: '界面缩放',
+    getSubtitle: () => '当前缩放比例：${Pref.uiScale.toStringAsFixed(2)}',
+    leading: const Icon(Icons.zoom_in_outlined),
+    onTap: _showUiScaleDialog,
   ),
   NormalModel(
     title: '页面过渡动画',
@@ -220,12 +232,14 @@ List<SettingsModel> get styleSettings => [
     leading: Icon(Icons.people_alt_outlined),
     setKey: SettingBoxKey.dynamicsShowAllFollowedUp,
     defaultVal: false,
+    needReboot: true,
   ),
   const SwitchModel(
     title: '动态页展开正在直播UP列表',
     leading: Icon(Icons.live_tv),
     setKey: SettingBoxKey.expandDynLivePanel,
     defaultVal: false,
+    needReboot: true,
   ),
   NormalModel(
     onTap: (context, setState) async {
@@ -240,7 +254,7 @@ List<SettingsModel> get styleSettings => [
         },
       );
       if (result != null) {
-        MainController mainController = Get.put(MainController())
+        final mainController = Get.find<MainController>()
           ..dynamicBadgeMode = DynamicBadgeMode.values[result.index];
         if (mainController.dynamicBadgeMode != DynamicBadgeMode.hidden) {
           mainController.getUnreadDynamic();
@@ -270,7 +284,7 @@ List<SettingsModel> get styleSettings => [
         },
       );
       if (result != null) {
-        MainController mainController = Get.put(MainController())
+        final mainController = Get.find<MainController>()
           ..msgBadgeMode = DynamicBadgeMode.values[result.index];
         if (mainController.msgBadgeMode != DynamicBadgeMode.hidden) {
           mainController.queryUnreadMsg(true);
@@ -294,12 +308,12 @@ List<SettingsModel> get styleSettings => [
           return MultiSelectDialog<MsgUnReadType>(
             title: '消息未读类型',
             initValues: Pref.msgUnReadTypeV2,
-            values: {for (var i in MsgUnReadType.values) i: i.title},
+            values: {for (final i in MsgUnReadType.values) i: i.title},
           );
         },
       );
       if (result != null) {
-        MainController mainController = Get.put(MainController())
+        final mainController = Get.find<MainController>()
           ..msgUnReadTypes = result;
         if (mainController.msgBadgeMode != DynamicBadgeMode.hidden) {
           mainController.queryUnreadMsg();
@@ -548,7 +562,7 @@ List<SettingsModel> get styleSettings => [
           Get.find<MineController>().themeType.value = result;
         } catch (_) {}
         GStorage.setting.put(SettingBoxKey.themeMode, result.index);
-        Get.put(ColorSelectController()).themeType.value = result;
+        Get.putOrFind(ColorSelectController.new).themeType.value = result;
         Get.changeThemeMode(result.toThemeMode);
         setState();
       }
@@ -572,39 +586,46 @@ List<SettingsModel> get styleSettings => [
     onTap: (context, setState) => Get.toNamed('/colorSetting'),
     leading: const Icon(Icons.color_lens_outlined),
     title: '应用主题',
-    getSubtitle: () =>
-        '当前主题：${Get.put(ColorSelectController()).dynamicColor.value ? '动态取色' : '指定颜色'}',
+    getSubtitle: () => '当前主题：${Pref.dynamicColor ? '动态取色' : '指定颜色'}',
+    getTrailing: () => Pref.dynamicColor
+        ? Icon(Icons.color_lens_rounded, color: Get.theme.colorScheme.primary)
+        : SizedBox.square(
+            dimension: 32,
+            child: ColorPalette(
+              colorScheme: colorThemeTypes[Pref.customColor].color
+                  .asColorSchemeSeed(Pref.schemeVariant, Get.theme.brightness),
+              selected: false,
+              showBgColor: false,
+            ),
+          ),
   ),
   NormalModel(
     onTap: (context, setState) async {
-      final result = await showDialog<int>(
+      final result = await showDialog<NavigationBarType>(
         context: context,
         builder: (context) {
-          return SelectDialog<int>(
+          return SelectDialog<NavigationBarType>(
             title: '首页启动页',
             value: Pref.defaultHomePage,
-            values: NavigationBarType.values
-                .map((e) => (e.index, e.label))
-                .toList(),
+            values: NavigationBarType.values.map((e) => (e, e.label)).toList(),
           );
         },
       );
       if (result != null) {
-        await GStorage.setting.put(SettingBoxKey.defaultHomePage, result);
+        await GStorage.setting.put(SettingBoxKey.defaultHomePage, result.index);
         SmartDialog.showToast('设置成功，重启生效');
         setState();
       }
     },
     leading: const Icon(Icons.home_outlined),
     title: '默认启动页',
-    getSubtitle: () =>
-        '当前启动页：${NavigationBarType.values.firstWhere((e) => e.index == Pref.defaultHomePage).label}',
+    getSubtitle: () => '当前启动页：${Pref.defaultHomePage.label}',
   ),
   NormalModel(
     title: '滑动动画弹簧参数',
     leading: const Icon(Icons.chrome_reader_mode_outlined),
     onTap: (context, setState) {
-      List<String> springDescription = CustomSpringDescription.springDescription
+      final List<String> springDescription = Pref.springDescription
           .map((i) => i.toString())
           .toList();
       showDialog(
@@ -622,9 +643,7 @@ List<SettingsModel> get styleSettings => [
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
                   ),
-                  onChanged: (value) {
-                    springDescription[index] = value;
-                  },
+                  onChanged: (value) => springDescription[index] = value,
                   inputFormatters: [
                     FilteringTextInputFormatter.allow(RegExp(r'[\d\.]+')),
                   ],
@@ -636,6 +655,14 @@ List<SettingsModel> get styleSettings => [
             ),
             actions: [
               TextButton(
+                onPressed: () {
+                  Get.back();
+                  GStorage.setting.delete(SettingBoxKey.springDescription);
+                  SmartDialog.showToast('重置成功，重启生效');
+                },
+                child: const Text('重置'),
+              ),
+              TextButton(
                 onPressed: Get.back,
                 child: Text(
                   '取消',
@@ -645,19 +672,15 @@ List<SettingsModel> get styleSettings => [
                 ),
               ),
               TextButton(
-                onPressed: () async {
-                  Get.back();
-                  await GStorage.setting.put(
-                    SettingBoxKey.springDescription,
-                    List<double>.generate(
-                      3,
-                      (i) =>
-                          double.tryParse(springDescription[i]) ??
-                          CustomSpringDescription.springDescription[i],
-                    ),
-                  );
-                  SmartDialog.showToast('设置成功，重启生效');
-                  setState();
+                onPressed: () {
+                  try {
+                    final res = springDescription.map(double.parse).toList();
+                    Get.back();
+                    GStorage.setting.put(SettingBoxKey.springDescription, res);
+                    SmartDialog.showToast('设置成功，重启生效');
+                  } catch (e) {
+                    SmartDialog.showToast(e.toString());
+                  }
                 },
                 child: const Text('确定'),
               ),
@@ -671,15 +694,18 @@ List<SettingsModel> get styleSettings => [
     onTap: (context, setState) async {
       final result = await Get.toNamed('/fontSizeSetting');
       if (result != null) {
-        Get.put(ColorSelectController()).currentTextScale.value = result;
+        Get.putOrFind(ColorSelectController.new).currentTextScale.value =
+            result;
       }
     },
     title: '字体大小',
     leading: const Icon(Icons.format_size_outlined),
     getSubtitle: () =>
-        Get.put(ColorSelectController()).currentTextScale.value == 1.0
+        Get.putOrFind(ColorSelectController.new).currentTextScale.value == 1.0
         ? '默认'
-        : Get.put(ColorSelectController()).currentTextScale.value.toString(),
+        : Get.putOrFind(
+            ColorSelectController.new,
+          ).currentTextScale.value.toString(),
   ),
   NormalModel(
     onTap: (context, setState) => Get.toNamed(
@@ -748,4 +774,111 @@ void _showQualityDialog({
       onChanged(result.toInt());
     }
   });
+}
+
+void _showUiScaleDialog(
+  BuildContext context,
+  VoidCallback setState,
+) {
+  const minUiScale = 0.5;
+  const maxUiScale = 2.0;
+
+  double uiScale = Pref.uiScale;
+  final textController = TextEditingController(
+    text: uiScale.toStringAsFixed(2),
+  );
+
+  showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text('界面缩放'),
+        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
+        content: StatefulBuilder(
+          onDispose: textController.dispose,
+          builder: (context, setDialogState) {
+            return Column(
+              spacing: 20,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Slider(
+                  padding: .zero,
+                  value: uiScale,
+                  min: minUiScale,
+                  max: maxUiScale,
+                  secondaryTrackValue: 1.0,
+                  divisions: ((maxUiScale - minUiScale) * 20).toInt(),
+                  label: textController.text,
+                  onChanged: (value) => setDialogState(() {
+                    uiScale = value.toPrecision(2);
+                    textController.text = uiScale.toStringAsFixed(2);
+                  }),
+                ),
+                TextFormField(
+                  controller: textController,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  inputFormatters: [
+                    LengthLimitingTextInputFormatter(4),
+                    FilteringTextInputFormatter.allow(RegExp(r'[\d.]+')),
+                  ],
+                  decoration: const InputDecoration(
+                    labelText: '缩放比例',
+                    hintText: '0.50 - 2.00',
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (value) {
+                    final parsed = double.tryParse(value);
+                    if (parsed != null &&
+                        parsed >= minUiScale &&
+                        parsed <= maxUiScale) {
+                      setDialogState(() {
+                        uiScale = parsed;
+                      });
+                    }
+                  },
+                ),
+              ],
+            );
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              GStorage.setting.delete(SettingBoxKey.uiScale).whenComplete(() {
+                setState();
+                Get.appUpdate();
+                ScaledWidgetsFlutterBinding.instance.setScaleFactor(1.0);
+              });
+            },
+            child: const Text('重置'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              '取消',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.outline,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              GStorage.setting.put(SettingBoxKey.uiScale, uiScale).whenComplete(
+                () {
+                  setState();
+                  Get.appUpdate();
+                  ScaledWidgetsFlutterBinding.instance.setScaleFactor(uiScale);
+                },
+              );
+            },
+            child: const Text('确定'),
+          ),
+        ],
+      );
+    },
+  );
 }

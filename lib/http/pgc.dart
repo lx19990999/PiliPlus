@@ -19,7 +19,7 @@ abstract final class PgcHttp {
     type,
     indexType,
   }) async {
-    var res = await Request().get(
+    final res = await Request().get(
       Api.pgcIndexResult,
       queryParameters: {
         ...params,
@@ -42,7 +42,7 @@ abstract final class PgcHttp {
     required Object type,
     Object? indexType,
   }) async {
-    var res = await Request().get(
+    final res = await Request().get(
       Api.pgcIndexCondition,
       queryParameters: {
         'season_type': ?seasonType,
@@ -61,7 +61,7 @@ abstract final class PgcHttp {
     int? page,
     int? indexType,
   }) async {
-    var res = await Request().get(
+    final res = await Request().get(
       Api.pgcIndexResult,
       queryParameters: {
         'st': 1,
@@ -95,7 +95,7 @@ abstract final class PgcHttp {
     required int before,
     required int after,
   }) async {
-    var res = await Request().get(
+    final res = await Request().get(
       Api.pgcTimeline,
       queryParameters: {
         'types': types,
@@ -116,7 +116,7 @@ abstract final class PgcHttp {
     int sort = 0,
     String? next,
   }) async {
-    var res = await Request().get(
+    final res = await Request().get(
       type.api,
       queryParameters: {
         'media_id': mediaId,
@@ -137,7 +137,7 @@ abstract final class PgcHttp {
     required Object mediaId,
     required Object reviewId,
   }) async {
-    var res = await Request().post(
+    final res = await Request().post(
       Api.pgcReviewLike,
       data: {
         'media_id': mediaId,
@@ -158,7 +158,7 @@ abstract final class PgcHttp {
     required Object mediaId,
     required Object reviewId,
   }) async {
-    var res = await Request().post(
+    final res = await Request().post(
       Api.pgcReviewDislike,
       data: {
         'media_id': mediaId,
@@ -181,7 +181,7 @@ abstract final class PgcHttp {
     required String content,
     bool shareFeed = false,
   }) async {
-    var res = await Request().post(
+    final res = await Request().post(
       Api.pgcReviewPost,
       data: {
         'media_id': mediaId,
@@ -205,7 +205,7 @@ abstract final class PgcHttp {
     required String content,
     required reviewId,
   }) async {
-    var res = await Request().post(
+    final res = await Request().post(
       Api.pgcReviewMod,
       data: {
         'media_id': mediaId,
@@ -227,7 +227,7 @@ abstract final class PgcHttp {
     required Object mediaId,
     required Object reviewId,
   }) async {
-    var res = await Request().post(
+    final res = await Request().post(
       Api.pgcReviewDel,
       data: {
         'media_id': mediaId,
@@ -243,15 +243,15 @@ abstract final class PgcHttp {
     }
   }
 
-  static Future seasonStatus(Object seasonId) async {
-    var res = await Request().get(
+  static Future<LoadingState<Map>> seasonStatus(Object seasonId) async {
+    final res = await Request().get(
       Api.seasonStatus,
       queryParameters: {'season_id': seasonId},
     );
     if (res.data['code'] == 0) {
-      return {'status': true, 'data': res.data['result']};
+      return Success(res.data['result']);
     } else {
-      return {'status': false, 'msg': res.data['message']};
+      return Error(res.data['message']);
     }
   }
 }

@@ -66,7 +66,7 @@ class _SettingsSearchPageState
             onPressed: () {
               if (_textEditingController.text.isNotEmpty) {
                 _textEditingController.clear();
-                _list.value = <SettingsModel>[];
+                _list.clear();
               } else {
                 Get.back();
               }
@@ -83,6 +83,7 @@ class _SettingsSearchPageState
           decoration: const InputDecoration(
             isDense: true,
             hintText: '搜索',
+            visualDensity: .standard,
             border: InputBorder.none,
           ),
         ),

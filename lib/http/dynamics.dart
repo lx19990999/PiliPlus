@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:PiliPlus/common/widgets/pair.dart';
 import 'package:PiliPlus/http/api.dart';
 import 'package:PiliPlus/http/constants.dart';
@@ -25,7 +27,7 @@ import 'package:PiliPlus/utils/utils.dart';
 import 'package:PiliPlus/utils/wbi_sign.dart';
 import 'package:dio/dio.dart';
 
-class DynamicsHttp {
+abstract final class DynamicsHttp {
   @pragma('vm:notify-debugger-on-exception')
   static Future<LoadingState<DynamicsDataModel>> followDynamic({
     DynamicsTabType type = DynamicsTabType.all,
@@ -43,8 +45,8 @@ class DynamicsHttp {
       'offset': offset,
       'features': 'itemOpusStyle,listOnlyfans',
     };
-    var res = await Request().get(Api.followDynamic, queryParameters: data);
-    var code = res.data['code'];
+    final res = await Request().get(Api.followDynamic, queryParameters: data);
+    final code = res.data['code'];
     if (code == 0) {
       try {
         DynamicsDataModel data = DynamicsDataModel.fromJson(
@@ -70,7 +72,7 @@ class DynamicsHttp {
   }
 
   static Future<LoadingState<FollowUpModel>> followUp() async {
-    var res = await Request().get(
+    final res = await Request().get(
       Api.followUp,
       queryParameters: {
         'up_list_more': 1,
@@ -85,7 +87,7 @@ class DynamicsHttp {
   }
 
   static Future<LoadingState<DynUpList>> dynUpList(String? offset) async {
-    var res = await Request().get(
+    final res = await Request().get(
       Api.dynUplist,
       queryParameters: {
         'offset': offset,
@@ -105,7 +107,7 @@ class DynamicsHttp {
   //   required String? dynamicId,
   //   required int? up,
   // }) async {
-  //   var res = await Request().post(
+  //   final res = await Request().post(
   //     Api.likeDynamic,
   //     queryParameters: {
   //       'dynamic_id': dynamicId,
@@ -128,7 +130,7 @@ class DynamicsHttp {
     required String? dynamicId,
     required int? up,
   }) async {
-    var res = await Request().post(
+    final res = await Request().post(
       Api.thumbDynamic,
       queryParameters: {
         'csrf': Accounts.main.csrf,
@@ -151,7 +153,7 @@ class DynamicsHttp {
     }
   }
 
-  static Future createDynamic({
+  static Future<LoadingState<Map?>> createDynamic({
     dynamic mid,
     dynamic dynIdStr, // repost dyn
     dynamic rid, // repost video
@@ -166,13 +168,13 @@ class DynamicsHttp {
     String? title,
     Map? attachCard,
   }) async {
-    var res = await Request().post(
+    final res = await Request().post(
       Api.createDynamic,
       queryParameters: {
         'platform': 'web',
         'csrf': Accounts.main.csrf,
-        'x-bili-device-req-json': {"platform": "web", "device": "pc"},
-        'x-bili-web-req-json': {"spm_id": "333.999"},
+        'x-bili-device-req-json': '{"platform": "web", "device": "pc"}',
+        'x-bili-web-req-json': '{"spm_id": "333.999"}',
       },
       data: {
         "dyn_req": {
@@ -231,15 +233,9 @@ class DynamicsHttp {
       },
     );
     if (res.data['code'] == 0) {
-      return {
-        'status': true,
-        'data': res.data['data'],
-      };
+      return Success(res.data['data']);
     } else {
-      return {
-        'status': false,
-        'msg': res.data['message'],
-      };
+      return Error(res.data['message']);
     }
   }
 
@@ -251,7 +247,7 @@ class DynamicsHttp {
     dynamic type,
     bool clearCookie = false,
   }) async {
-    var res = await Request().get(
+    final res = await Request().get(
       Api.dynamicDetail,
       queryParameters: {
         'timezone_offset': -480,
@@ -281,7 +277,7 @@ class DynamicsHttp {
   static Future<LoadingState<Null>> setTop({
     required Object dynamicId,
   }) async {
-    var res = await Request().post(
+    final res = await Request().post(
       Api.setTopDyn,
       queryParameters: {
         'csrf': Accounts.main.csrf,
@@ -300,7 +296,7 @@ class DynamicsHttp {
   static Future<LoadingState<Null>> rmTop({
     required Object dynamicId,
   }) async {
-    var res = await Request().post(
+    final res = await Request().post(
       Api.rmTopDyn,
       queryParameters: {
         'csrf': Accounts.main.csrf,
@@ -319,7 +315,7 @@ class DynamicsHttp {
   static Future<LoadingState<ArticleInfoData>> articleInfo({
     required Object cvId,
   }) async {
-    var res = await Request().get(
+    final res = await Request().get(
       Api.articleInfo,
       queryParameters: await WbiSign.makSign({
         'id': cvId,
@@ -483,7 +479,7 @@ class DynamicsHttp {
     required Object dynamicIdStr,
     required Object? reserveTotal,
   }) async {
-    var res = await Request().post(
+    final res = await Request().post(
       Api.dynReserve,
       queryParameters: {
         'csrf': Accounts.main.csrf,
@@ -671,6 +667,112 @@ class DynamicsHttp {
             ?.map((e) => FolloweeVote.fromJson(e))
             .toList(),
       );
+    } else {
+      return Error(res.data['message']);
+    }
+  }
+
+  static Future<LoadingState<Null>> dynPrivatePubSetting({
+    required Object dynId,
+    int? dynType,
+    required String action,
+  }) async {
+    final res = await Request().post(
+      Api.dynPrivatePubSetting,
+      queryParameters: {
+        'platform': 'web',
+        'csrf': Accounts.main.csrf,
+      },
+      data: {
+        "object_id": jsonEncode({
+          "dyn_id": dynId.toString(),
+          "dyn_type": ?dynType,
+        }),
+        "action": action,
+      },
+      options: Options(contentType: Headers.jsonContentType),
+    );
+    if (res.data['code'] == 0) {
+      return const Success(null);
+    } else {
+      return Error(res.data['message']);
+    }
+  }
+
+  static Future<LoadingState<Null>> editDyn({
+    required Object dynId,
+    Object? repostDynId,
+    dynamic rawText,
+    List? pics,
+    ReplyOptionType? replyOption,
+    int? privatePub,
+    List<Map<String, dynamic>>? extraContent,
+    Pair<int, String>? topic,
+    String? title,
+    Map? attachCard,
+  }) async {
+    final uploadId =
+        "${Accounts.main.mid}_${DateTime.now().millisecondsSinceEpoch ~/ 1000}_${Utils.random.nextInt(9000) + 1000}";
+    final res = await Request().post(
+      Api.editDyn,
+      queryParameters: await WbiSign.makSign({
+        'platform': 'web',
+        'csrf': Accounts.main.csrf,
+        'x-bili-device-req-json':
+            '{"platform":"web","device":"pc","spmid":"333.1368"}',
+        'w_dyn_req.upload_id': uploadId,
+        'w_dyn_req.meta':
+            '{"app_meta":{"from":"create.dynamic.web","mobi_app":"web"}}',
+      }),
+      data: {
+        "dyn_req": {
+          "content": {
+            "contents": [
+              if (rawText != null)
+                {
+                  "raw_text": rawText,
+                  "type": 1,
+                  "biz_id": "",
+                },
+              ...?extraContent,
+            ],
+            if (title != null && title.isNotEmpty) 'title': title,
+          },
+          if (privatePub != null || replyOption != null)
+            "option": {
+              'private_pub': ?privatePub,
+              if (replyOption == ReplyOptionType.close)
+                "close_comment": 1
+              else if (replyOption == ReplyOptionType.choose)
+                "up_choose_comment": 1,
+            },
+          "scene": repostDynId != null
+              ? 4
+              : pics != null
+              ? 2
+              : 1,
+          'pics': ?pics,
+          "attach_card": attachCard,
+          "upload_id": uploadId,
+          "meta": {
+            "app_meta": {"from": "create.dynamic.web", "mobi_app": "web"},
+          },
+          if (topic != null)
+            "topic": {
+              "id": topic.first,
+              "name": topic.second,
+              "from_source": "dyn.web.list",
+              "from_topic_id": 0,
+            },
+        },
+        "dyn_id_str": dynId.toString(),
+        if (repostDynId != null)
+          "web_repost_src": {"dyn_id_str": repostDynId.toString()},
+      },
+      options: Options(contentType: Headers.jsonContentType),
+    );
+    if (res.data['code'] == 0) {
+      return const Success(null);
     } else {
       return Error(res.data['message']);
     }

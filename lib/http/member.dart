@@ -29,14 +29,15 @@ import 'package:PiliPlus/utils/app_sign.dart';
 import 'package:PiliPlus/utils/utils.dart';
 import 'package:PiliPlus/utils/wbi_sign.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 
 abstract final class MemberHttp {
-  static Future reportMember(
+  static Future<void> reportMember(
     dynamic mid, {
     String? reason,
     int? reasonV2,
   }) async {
-    var res = await Request().post(
+    final res = await Request().post(
       Api.reportMember,
       data: {
         'mid': mid,
@@ -46,10 +47,11 @@ abstract final class MemberHttp {
       },
       options: Options(contentType: Headers.formUrlEncodedContentType),
     );
-    return {
-      'status': res.data['status'],
-      'msg': res.data['message'] ?? res.data['data'],
-    };
+    if (res.data['status'] == true) {
+      SmartDialog.showToast('举报成功');
+    } else {
+      SmartDialog.showToast('举报失败');
+    }
   }
 
   static Future<LoadingState<SpaceArticleData>> spaceArticle({
@@ -69,7 +71,7 @@ abstract final class MemberHttp {
       'statistics': Constants.statisticsApp,
       'vmid': mid,
     };
-    var res = await Request().get(
+    final res = await Request().get(
       Api.spaceArticle,
       queryParameters: params,
       options: Options(
@@ -90,7 +92,7 @@ abstract final class MemberHttp {
     required int? mid,
     required int pn,
   }) async {
-    var res = await Request().get(
+    final res = await Request().get(
       Api.seasonSeries,
       queryParameters: {
         'mid': mid,
@@ -140,7 +142,7 @@ abstract final class MemberHttp {
       'statistics': Constants.statisticsApp,
       'vmid': mid,
     };
-    var res = await Request().get(
+    final res = await Request().get(
       switch (type) {
         ContributeType.video => Api.spaceArchive,
         ContributeType.charging => Api.spaceChargingArchive,
@@ -168,7 +170,7 @@ abstract final class MemberHttp {
     required int page,
     required mid,
   }) async {
-    var res = await Request().get(
+    final res = await Request().get(
       Api.spaceAudio,
       queryParameters: {
         'pn': page,
@@ -189,7 +191,7 @@ abstract final class MemberHttp {
     required int page,
     required mid,
   }) async {
-    var res = await Request().get(
+    final res = await Request().get(
       Api.spaceCheese,
       queryParameters: {
         'pn': page,
@@ -205,48 +207,48 @@ abstract final class MemberHttp {
     }
   }
 
-  static Future<LoadingState> spaceStory({
-    required Object mid,
-    required Object aid,
-    required Object beforeSize,
-    required Object afterSize,
-    required Object cid,
-    required Object contain,
-    required Object index,
-  }) async {
-    final params = {
-      'aid': aid,
-      'before_size': beforeSize,
-      'after_size': afterSize,
-      'cid': cid,
-      'contain': contain,
-      'index': index,
-      'build': 8430300,
-      'version': '8.43.0',
-      'c_locale': 'zh_CN',
-      'channel': 'master',
-      'mobi_app': 'android',
-      'platform': 'android',
-      's_locale': 'zh_CN',
-      'statistics': Constants.statisticsApp,
-      'vmid': mid,
-    };
-    var res = await Request().get(
-      Api.spaceStory,
-      queryParameters: params,
-      options: Options(
-        headers: {
-          'bili-http-engine': 'cronet',
-          'user-agent': Constants.userAgentApp,
-        },
-      ),
-    );
-    if (res.data['code'] == 0) {
-      return Success(res.data['data']);
-    } else {
-      return Error(res.data['message']);
-    }
-  }
+  // static Future<LoadingState> spaceStory({
+  //   required Object mid,
+  //   required Object aid,
+  //   required Object beforeSize,
+  //   required Object afterSize,
+  //   required Object cid,
+  //   required Object contain,
+  //   required Object index,
+  // }) async {
+  //   final params = {
+  //     'aid': aid,
+  //     'before_size': beforeSize,
+  //     'after_size': afterSize,
+  //     'cid': cid,
+  //     'contain': contain,
+  //     'index': index,
+  //     'build': 8430300,
+  //     'version': '8.43.0',
+  //     'c_locale': 'zh_CN',
+  //     'channel': 'master',
+  //     'mobi_app': 'android',
+  //     'platform': 'android',
+  //     's_locale': 'zh_CN',
+  //     'statistics': Constants.statisticsApp,
+  //     'vmid': mid,
+  //   };
+  //   final res = await Request().get(
+  //     Api.spaceStory,
+  //     queryParameters: params,
+  //     options: Options(
+  //       headers: {
+  //         'bili-http-engine': 'cronet',
+  //         'user-agent': Constants.userAgentApp,
+  //       },
+  //     ),
+  //   );
+  //   if (res.data['code'] == 0) {
+  //     return Success(res.data['data']);
+  //   } else {
+  //     return Error(res.data['message']);
+  //   }
+  // }
 
   static Future<LoadingState<SpaceData>> space({
     int? mid,
@@ -264,7 +266,7 @@ abstract final class MemberHttp {
       'statistics': Constants.statisticsApp,
       'vmid': mid,
     };
-    var res = await Request().get(
+    final res = await Request().get(
       Api.space,
       queryParameters: params,
       options: Options(
@@ -297,7 +299,7 @@ abstract final class MemberHttp {
       'dm_cover_img_str': dmCoverImgStr,
       'dm_img_inter': '{"ds":[],"wh":[0,0,0],"of":[0,0,0]}',
     });
-    var res = await Request().get(
+    final res = await Request().get(
       Api.memberInfo,
       queryParameters: params,
       options: Options(
@@ -315,19 +317,22 @@ abstract final class MemberHttp {
     }
   }
 
-  static Future memberStat({int? mid}) async {
-    var res = await Request().get(Api.userStat, queryParameters: {'vmid': mid});
+  static Future<LoadingState<Map>> memberStat({int? mid}) async {
+    final res = await Request().get(
+      Api.userStat,
+      queryParameters: {'vmid': mid},
+    );
     if (res.data['code'] == 0) {
-      return {'status': true, 'data': res.data['data']};
+      return Success(res.data['data']);
     } else {
-      return {'status': false, 'msg': res.data['message']};
+      return Error(res.data['message']);
     }
   }
 
   static Future<LoadingState<MemberCardInfoData>> memberCardInfo({
     int? mid,
   }) async {
-    var res = await Request().get(
+    final res = await Request().get(
       Api.memberCardInfo,
       queryParameters: {
         'mid': mid,
@@ -356,7 +361,7 @@ abstract final class MemberHttp {
       'mid': mid,
       'ps': ps,
       'tid': tid,
-      'pn': pn,
+      'pn': ?pn,
       'keyword': ?keyword,
       'order': order,
       'platform': 'web',
@@ -367,7 +372,7 @@ abstract final class MemberHttp {
       'dm_cover_img_str': dmCoverImgStr,
       'dm_img_inter': '{"ds":[],"wh":[0,0,0],"of":[0,0,0]}',
     });
-    var res = await Request().get(
+    final res = await Request().get(
       Api.searchArchive,
       queryParameters: params,
       options: Options(
@@ -392,7 +397,7 @@ abstract final class MemberHttp {
   @pragma('vm:notify-debugger-on-exception')
   static Future<LoadingState<DynamicsDataModel>> memberDynamic({
     String? offset,
-    int? mid,
+    required int mid,
   }) async {
     String dmImgStr = Utils.base64EncodeRandomString(16, 64);
     String dmCoverImgStr = Utils.base64EncodeRandomString(32, 128);
@@ -410,7 +415,7 @@ abstract final class MemberHttp {
       'x-bili-device-req-json':
           '{"platform":"web","device":"pc","spmid":"333.1387"}',
     });
-    var res = await Request().get(
+    final res = await Request().get(
       Api.memberDynamic,
       queryParameters: params,
       options: Options(
@@ -445,7 +450,7 @@ abstract final class MemberHttp {
     required dynamic offset,
     required String keyword,
   }) async {
-    var res = await Request().get(
+    final res = await Request().get(
       Api.dynSearch,
       queryParameters: {
         'host_mid': mid,
@@ -465,7 +470,7 @@ abstract final class MemberHttp {
 
   // 查询分组
   static Future<LoadingState<List<MemberTagItemModel>>> followUpTags() async {
-    var res = await Request().get(Api.followUpTag);
+    final res = await Request().get(Api.followUpTag);
     if (res.data['code'] == 0) {
       return Success(
         (res.data['data'] as List)
@@ -481,7 +486,7 @@ abstract final class MemberHttp {
     int? fid,
     bool isAdd = true,
   }) async {
-    var res = await Request().post(
+    final res = await Request().post(
       isAdd ? Api.addSpecial : Api.delSpecial,
       data: {
         'fid': fid,
@@ -498,7 +503,7 @@ abstract final class MemberHttp {
 
   // 设置分组
   static Future<LoadingState<Null>> addUsers(String fids, String tagids) async {
-    var res = await Request().post(
+    final res = await Request().post(
       Api.addUsers,
       queryParameters: {
         'x-bili-device-req-json':
@@ -526,7 +531,7 @@ abstract final class MemberHttp {
     int? pn,
     int ps = 20,
   }) async {
-    var res = await Request().get(
+    final res = await Request().get(
       Api.followUpGroup,
       queryParameters: {
         'mid': mid,
@@ -551,7 +556,7 @@ abstract final class MemberHttp {
   }
 
   static Future<LoadingState<Null>> createFollowTag(Object tagName) async {
-    var res = await Request().post(
+    final res = await Request().post(
       Api.createFollowTag,
       queryParameters: {
         'x-bili-device-req-json':
@@ -574,7 +579,7 @@ abstract final class MemberHttp {
     Object tagid,
     Object name,
   ) async {
-    var res = await Request().post(
+    final res = await Request().post(
       Api.updateFollowTag,
       queryParameters: {
         'x-bili-device-req-json':
@@ -595,7 +600,7 @@ abstract final class MemberHttp {
   }
 
   static Future<LoadingState<Null>> delFollowTag(Object tagid) async {
-    var res = await Request().post(
+    final res = await Request().post(
       Api.delFollowTag,
       queryParameters: {
         'x-bili-device-req-json':
@@ -616,7 +621,7 @@ abstract final class MemberHttp {
 
   // 获取up置顶
   static Future<LoadingState<List<MemberTagItemModel>?>> getTopVideo() async {
-    var res = await Request().get(Api.getTopVideoApi);
+    final res = await Request().get(Api.getTopVideoApi);
     if (res.data['code'] == 0) {
       return Success(
         (res.data['data'] as List?)
@@ -629,15 +634,15 @@ abstract final class MemberHttp {
   }
 
   // 获取up播放数、点赞数
-  static Future memberView({required int mid}) async {
-    var res = await Request().get(
+  static Future<LoadingState<Map>> memberView({required int mid}) async {
+    final res = await Request().get(
       Api.getMemberViewApi,
       queryParameters: {'mid': mid},
     );
     if (res.data['code'] == 0) {
-      return {'status': true, 'data': res.data['data']};
+      return Success(res.data['data']);
     } else {
-      return {'status': false, 'msg': res.data['message']};
+      return Error(res.data['message']);
     }
   }
 
@@ -648,7 +653,7 @@ abstract final class MemberHttp {
     required int pn,
     required String name,
   }) async {
-    Map<String, dynamic> data = {
+    final data = {
       'vmid': mid,
       'pn': pn,
       'ps': ps,
@@ -659,7 +664,7 @@ abstract final class MemberHttp {
       'web_location': 333.999,
     };
     Map params = await WbiSign.makSign(data);
-    var res = await Request().get(
+    final res = await Request().get(
       Api.followSearch,
       queryParameters: {
         ...data,
@@ -680,7 +685,7 @@ abstract final class MemberHttp {
     String offset = '',
     String type = 'all',
   }) async {
-    var res = await Request().get(
+    final res = await Request().get(
       Api.spaceOpus,
       queryParameters: await WbiSign.makSign({
         'host_mid': hostMid,
@@ -702,7 +707,7 @@ abstract final class MemberHttp {
     required int page,
     int? privilegeType,
   }) async {
-    var res = await Request().get(
+    final res = await Request().get(
       Api.upowerRank,
       queryParameters: {
         'up_mid': upMid,
@@ -725,7 +730,7 @@ abstract final class MemberHttp {
     required int mid,
     required int page,
   }) async {
-    var res = await Request().get(
+    final res = await Request().get(
       Api.coinArc,
       queryParameters: {
         'pn': page,
@@ -744,7 +749,7 @@ abstract final class MemberHttp {
     required int mid,
     required int page,
   }) async {
-    var res = await Request().get(
+    final res = await Request().get(
       Api.likeArc,
       queryParameters: {
         'pn': page,
@@ -771,7 +776,7 @@ abstract final class MemberHttp {
       'statistics': Constants.statisticsApp,
     };
     AppSign.appSign(params);
-    var res = await Request().post(
+    final res = await Request().post(
       Api.spaceShop,
       queryParameters: params,
       data: {

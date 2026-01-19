@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:PiliPlus/common/constants.dart';
+import 'package:PiliPlus/common/widgets/cropped_image.dart';
 import 'package:PiliPlus/common/widgets/custom_icon.dart';
 import 'package:PiliPlus/common/widgets/gesture/immediate_tap_gesture_recognizer.dart';
 import 'package:PiliPlus/common/widgets/gesture/mouse_interactive_viewer.dart';
@@ -12,7 +13,6 @@ import 'package:PiliPlus/common/widgets/pair.dart';
 import 'package:PiliPlus/common/widgets/progress_bar/audio_video_progress_bar.dart';
 import 'package:PiliPlus/common/widgets/progress_bar/segment_progress_bar.dart';
 import 'package:PiliPlus/common/widgets/view_safe_area.dart';
-import 'package:PiliPlus/http/init.dart';
 import 'package:PiliPlus/models/common/sponsor_block/action_type.dart';
 import 'package:PiliPlus/models/common/sponsor_block/post_segment_model.dart';
 import 'package:PiliPlus/models/common/sponsor_block/segment_type.dart';
@@ -23,7 +23,6 @@ import 'package:PiliPlus/models_new/video/video_detail/episode.dart' as ugc;
 import 'package:PiliPlus/models_new/video/video_detail/episode.dart';
 import 'package:PiliPlus/models_new/video/video_detail/section.dart';
 import 'package:PiliPlus/models_new/video/video_detail/ugc_season.dart';
-import 'package:PiliPlus/models_new/video/video_shot/data.dart';
 import 'package:PiliPlus/pages/common/common_intro_controller.dart';
 import 'package:PiliPlus/pages/danmaku/danmaku_model.dart';
 import 'package:PiliPlus/pages/live_room/widgets/bottom_control.dart'
@@ -49,6 +48,7 @@ import 'package:PiliPlus/plugin/pl_player/widgets/forward_seek.dart';
 import 'package:PiliPlus/plugin/pl_player/widgets/mpv_convert_webp.dart';
 import 'package:PiliPlus/plugin/pl_player/widgets/play_pause_btn.dart';
 import 'package:PiliPlus/utils/duration_utils.dart';
+import 'package:PiliPlus/utils/extension/num_ext.dart';
 import 'package:PiliPlus/utils/extension/theme_ext.dart';
 import 'package:PiliPlus/utils/id_utils.dart';
 import 'package:PiliPlus/utils/image_utils.dart';
@@ -59,18 +59,18 @@ import 'package:PiliPlus/utils/storage_key.dart';
 import 'package:PiliPlus/utils/utils.dart';
 import 'package:canvas_danmaku/canvas_danmaku.dart';
 import 'package:collection/collection.dart';
-import 'package:dio/dio.dart';
 import 'package:easy_debounce/easy_throttle.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show RenderProxyBox;
 import 'package:flutter/services.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:flutter_volume_controller/flutter_volume_controller.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:get/get.dart' hide ContextExtensionss;
+import 'package:get/get.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:screen_brightness_platform_interface/screen_brightness_platform_interface.dart';
@@ -180,6 +180,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
         animationController.reverse();
       }
     });
+    transformationController = TransformationController();
     animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 100),
@@ -541,8 +542,8 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
             final List<SectionItem> sections = videoDetail.ugcSeason!.sections!;
             for (int i = 0; i < sections.length; i++) {
               final List<EpisodeItem> episodesList = sections[i].episodes!;
-              for (int j = 0; j < episodesList.length; j++) {
-                if (episodesList[j].cid == plPlayerController.cid) {
+              for (final item in episodesList) {
+                if (item.cid == currentCid) {
                   index = i;
                   episodes = episodesList;
                   break;
@@ -917,7 +918,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
 
   bool get isFullScreen => plPlayerController.isFullScreen.value;
 
-  late final transformationController = TransformationController();
+  late final TransformationController transformationController;
 
   late ColorScheme colorScheme;
   late double maxWidth;
@@ -1147,11 +1148,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
   }
 
   void onDoubleTapDownMobile(TapDownDetails details) {
-    if (plPlayerController.controlsLock.value) {
-      return;
-    }
-    if (plPlayerController.isLive) {
-      plPlayerController.doubleTapFuc(DoubleTapType.center);
+    if (plPlayerController.isLive || plPlayerController.controlsLock.value) {
       return;
     }
     final double tapPosition = details.localPosition.dx;
@@ -1168,7 +1165,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
   }
 
   void onTapDesktop() {
-    if (plPlayerController.controlsLock.value) {
+    if (plPlayerController.isLive || plPlayerController.controlsLock.value) {
       return;
     }
     plPlayerController.onDoubleTapCenter();
@@ -1202,17 +1199,21 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
     final ctr = plPlayerController.danmakuController;
     if (ctr != null) {
       final pos = details.localPosition;
-      final item = ctr.findSingleDanmaku(pos);
-      if (item == null) {
+      final res = ctr.findSingleDanmaku(pos);
+      if (res != null) {
+        final (dy, item) = res;
+        if (item != _suspendedDm) {
+          _suspendedDm?.suspend = false;
+          if (item.content.extra == null) {
+            _dmOffset.value = null;
+            return;
+          }
+          _suspendedDm = item..suspend = true;
+          this.dy = dy;
+        }
+      } else {
         _suspendedDm?.suspend = false;
         _dmOffset.value = null;
-      } else if (item != _suspendedDm) {
-        _suspendedDm?.suspend = false;
-        if (item.content.extra == null) {
-          _dmOffset.value = null;
-          return;
-        }
-        _suspendedDm = item..suspend = true;
       }
     }
   }
@@ -1739,106 +1740,72 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
             right: 0,
             child: Obx(
               () {
-                if (plPlayerController.showControls.value) {
-                  return const SizedBox.shrink();
-                }
-
-                switch (plPlayerController.progressType) {
-                  case BtmProgressBehavior.onlyShowFullScreen:
-                    if (!isFullScreen) {
-                      return const SizedBox.shrink();
-                    }
-                  case BtmProgressBehavior.onlyHideFullScreen:
-                    if (isFullScreen) {
-                      return const SizedBox.shrink();
-                    }
-                  default:
-                }
-
-                return Stack(
-                  clipBehavior: Clip.none,
-                  alignment: Alignment.bottomCenter,
-                  children: [
-                    IgnorePointer(
-                      child: RepaintBoundary.wrap(
-                        Obx(() {
-                          final int value =
-                              plPlayerController.sliderPositionSeconds.value;
-                          final int max = plPlayerController
-                              .durationSeconds
-                              .value
-                              .inSeconds;
-                          final int buffer =
-                              plPlayerController.bufferedSeconds.value;
-                          return ProgressBar(
-                            progress: Duration(seconds: value),
-                            buffered: Duration(seconds: buffer),
-                            total: Duration(seconds: max),
-                            progressBarColor: primary,
-                            baseBarColor: const Color(0x33FFFFFF),
-                            bufferedBarColor: bufferedBarColor,
-                            thumbColor: primary,
-                            thumbGlowColor: thumbGlowColor,
-                            barHeight: 3.5,
-                            thumbRadius: 2.5,
-                          );
-                        }),
-                        0,
-                      ),
-                    ),
-                    if (plPlayerController.enableBlock &&
-                        videoDetailController.segmentProgressList.isNotEmpty)
-                      Positioned(
-                        left: 0,
-                        right: 0,
-                        bottom: 0.75,
-                        child: IgnorePointer(
-                          child: RepaintBoundary.wrap(
-                            CustomPaint(
-                              size: const Size(double.infinity, 3.5),
-                              painter: SegmentProgressBar(
-                                segmentColors:
-                                    videoDetailController.segmentProgressList,
-                              ),
-                            ),
-                            1,
+                final showControls = plPlayerController.showControls.value;
+                final offstage = switch (plPlayerController.progressType) {
+                  BtmProgressBehavior.onlyShowFullScreen =>
+                    showControls || !isFullScreen,
+                  BtmProgressBehavior.onlyHideFullScreen =>
+                    showControls || isFullScreen,
+                  _ => showControls,
+                };
+                return Offstage(
+                  offstage: offstage,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    alignment: Alignment.bottomCenter,
+                    children: [
+                      Obx(() {
+                        final int value =
+                            plPlayerController.sliderPositionSeconds.value;
+                        final int max =
+                            plPlayerController.durationSeconds.value.inSeconds;
+                        final int buffer =
+                            plPlayerController.bufferedSeconds.value;
+                        return ProgressBar(
+                          progress: Duration(seconds: value),
+                          buffered: Duration(seconds: buffer),
+                          total: Duration(seconds: max),
+                          progressBarColor: primary,
+                          baseBarColor: const Color(0x33FFFFFF),
+                          bufferedBarColor: bufferedBarColor,
+                          thumbColor: primary,
+                          thumbGlowColor: thumbGlowColor,
+                          barHeight: 3.5,
+                          thumbRadius: 2.5,
+                        );
+                      }),
+                      if (plPlayerController.enableBlock &&
+                          videoDetailController.segmentProgressList.isNotEmpty)
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0.75,
+                          child: SegmentProgressBar(
+                            segments: videoDetailController.segmentProgressList,
                           ),
                         ),
-                      ),
-                    if (plPlayerController.showViewPoints &&
-                        videoDetailController.viewPointList.isNotEmpty &&
-                        videoDetailController.showVP.value) ...[
-                      Positioned(
-                        left: 0,
-                        right: 0,
-                        bottom: 0.75,
-                        child: IgnorePointer(
-                          child: RepaintBoundary.wrap(
-                            CustomPaint(
-                              size: const Size(double.infinity, 3.5),
-                              painter: SegmentProgressBar(
-                                segmentColors:
-                                    videoDetailController.viewPointList,
-                              ),
-                            ),
-                            2,
+                      if (plPlayerController.showViewPoints &&
+                          videoDetailController.viewPointList.isNotEmpty &&
+                          videoDetailController.showVP.value)
+                        Padding(
+                          padding: const .only(bottom: 4.25),
+                          child: ViewPointSegmentProgressBar(
+                            segments: videoDetailController.viewPointList,
+                            onSeek: PlatformUtils.isMobile
+                                ? (position) => plPlayerController.seekTo(
+                                    position,
+                                    isSeek: false,
+                                  )
+                                : null,
                           ),
                         ),
-                      ),
-                      if (PlatformUtils.isMobile)
-                        buildViewPointWidget(
-                          videoDetailController,
-                          plPlayerController,
-                          4.25,
-                          maxWidth,
-                        ),
+                      if (plPlayerController.showDmChart &&
+                          videoDetailController.showDmTrendChart.value)
+                        if (videoDetailController.dmTrend.value?.dataOrNull
+                            case final list?)
+                          buildDmChart(primary, list, videoDetailController),
                     ],
-                    if (plPlayerController.showDmChart &&
-                        videoDetailController.showDmTrendChart.value)
-                      if (videoDetailController.dmTrend.value?.dataOrNull
-                          case final list?)
-                        buildDmChart(primary, list, videoDetailController),
-                  ],
+                  ),
                 );
               },
             ),
@@ -1849,6 +1816,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
             plPlayerController,
             maxWidth,
             maxHeight,
+            () => mounted,
           ),
 
         if (isFullScreen || plPlayerController.isDesktopPip) ...[
@@ -1953,6 +1921,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
                       Image.asset(
                         'assets/images/loading.webp',
                         height: 25,
+                        cacheHeight: 25.cacheSize(context),
                         semanticLabel: "加载中",
                         color: Colors.white,
                       ),
@@ -2104,7 +2073,6 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
                 return Transform.flip(
                   flipX: plPlayerController.flipX.value,
                   flipY: plPlayerController.flipY.value,
-                  filterQuality: FilterQuality.low,
                   child: FittedBox(
                     fit: videoFit.boxFit,
                     alignment: widget.alignment,
@@ -2152,8 +2120,9 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
     WebpPreset preset = WebpPreset.def;
 
     final success =
-        await Get.dialog<bool>(
-          AlertDialog(
+        await showDialog<bool>(
+          context: Get.context!,
+          builder: (context) => AlertDialog(
             title: const Text('动态截图'),
             content: Column(
               spacing: 12,
@@ -2270,6 +2239,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
   static const _actionItemHeight = 35.0 - _triangleHeight;
 
   DanmakuItem<DanmakuExtra>? _suspendedDm;
+  late double dy = 0;
   late final Rxn<Offset> _dmOffset = Rxn<Offset>();
 
   void _removeDmAction() {
@@ -2321,16 +2291,13 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
     // fullscreen
     if (dx > maxWidth) {
       _removeDmAction();
-      return const Positioned(left: 0, top: 0, child: SizedBox.shrink());
+      return const SizedBox.shrink();
     }
 
     final seekOffset = _getValidOffset(item.content.text);
 
     final overlayWidth = _actionItemWidth * (seekOffset == null ? 3 : 4);
 
-    final dy = item.content.type == DanmakuItemType.bottom
-        ? maxHeight - item.yPosition - item.height
-        : item.yPosition;
     final top = dy + item.height + _triangleHeight + 2;
 
     final realLeft = dx + overlayWidth / 2;
@@ -2345,7 +2312,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
 
     if (right > (maxWidth - item.xPosition)) {
       _removeDmAction();
-      return const Positioned(left: 0, top: 0, child: SizedBox.shrink());
+      return const SizedBox.shrink();
     }
 
     final extra = item.content.extra;
@@ -2353,132 +2320,129 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
     return Positioned(
       right: right,
       top: top,
-      child: RepaintBoundary(
-        child: CustomPaint(
-          painter: _DanmakuTipPainter(offset: triangleOffset),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: switch (extra) {
-              null => throw UnimplementedError(),
-              VideoDanmaku() => [
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    _dmActionItem(
-                      extra.isLike
-                          ? const Icon(
-                              size: 20,
-                              CustomIcons.player_dm_tip_like_solid,
-                              color: Colors.white,
-                            )
-                          : const Icon(
-                              size: 20,
-                              CustomIcons.player_dm_tip_like,
-                              color: Colors.white,
-                            ),
-                      onTap: () => HeaderControl.likeDanmaku(
-                        extra,
-                        plPlayerController.cid!,
-                      ),
-                    ),
-                    if (extra.like > 0)
-                      Positioned(
-                        left: _actionItemWidth - 10.5,
-                        top: 0,
-                        child: Text(
-                          extra.like.toString(),
-                          style: const TextStyle(
-                            fontSize: 10.5,
+      child: _DanmakuTip(
+        offset: triangleOffset,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: switch (extra) {
+            null => throw UnimplementedError(),
+            VideoDanmaku() => [
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  _dmActionItem(
+                    extra.isLike
+                        ? const Icon(
+                            size: 20,
+                            CustomIcons.player_dm_tip_like_solid,
+                            color: Colors.white,
+                          )
+                        : const Icon(
+                            size: 20,
+                            CustomIcons.player_dm_tip_like,
                             color: Colors.white,
                           ),
-                        ),
-                      ),
-                  ],
-                ),
-
-                _dmActionItem(
-                  const Icon(
-                    size: 19,
-                    CustomIcons.player_dm_tip_copy,
-                    color: Colors.white,
-                  ),
-                  onTap: () => Utils.copyText(item.content.text),
-                ),
-                if (item.content.selfSend)
-                  _dmActionItem(
-                    const Icon(
-                      size: 20,
-                      CustomIcons.player_dm_tip_recall,
-                      color: Colors.white,
-                    ),
-                    onTap: () => HeaderControl.deleteDanmaku(
-                      extra.id,
+                    onTap: () => HeaderControl.likeDanmaku(
+                      extra,
                       plPlayerController.cid!,
                     ),
-                  )
-                else
-                  _dmActionItem(
-                    const Icon(
-                      size: 20,
-                      CustomIcons.player_dm_tip_back,
-                      color: Colors.white,
-                    ),
-                    onTap: () => HeaderControl.reportDanmaku(
-                      context,
-                      extra: extra,
-                      ctr: plPlayerController,
-                    ),
                   ),
-                if (seekOffset != null)
-                  _dmActionItem(
-                    const Icon(
-                      size: 18,
-                      Icons.gps_fixed_outlined,
-                      color: Colors.white,
+                  if (extra.like > 0)
+                    Positioned(
+                      left: _actionItemWidth - 10.5,
+                      top: 0,
+                      child: Text(
+                        extra.like.toString(),
+                        style: const TextStyle(
+                          fontSize: 10.5,
+                          color: Colors.white,
+                        ),
+                      ),
                     ),
-                    onTap: () => plPlayerController.seekTo(
-                      Duration(seconds: seekOffset),
-                      isSeek: false,
-                    ),
-                  ),
-              ],
-              LiveDanmaku() => [
+                ],
+              ),
+
+              _dmActionItem(
+                const Icon(
+                  size: 19,
+                  CustomIcons.player_dm_tip_copy,
+                  color: Colors.white,
+                ),
+                onTap: () => Utils.copyText(item.content.text),
+              ),
+              if (item.content.selfSend)
                 _dmActionItem(
                   const Icon(
                     size: 20,
-                    MdiIcons.accountOutline,
+                    CustomIcons.player_dm_tip_recall,
                     color: Colors.white,
                   ),
-                  onTap: () => Get.toNamed('/member?mid=${extra.mid}'),
-                ),
-                _dmActionItem(
-                  const Icon(
-                    size: 19,
-                    CustomIcons.player_dm_tip_copy,
-                    color: Colors.white,
+                  onTap: () => HeaderControl.deleteDanmaku(
+                    extra.id,
+                    plPlayerController.cid!,
                   ),
-                  onTap: () => Utils.copyText(item.content.text),
-                ),
+                )
+              else
                 _dmActionItem(
                   const Icon(
                     size: 20,
                     CustomIcons.player_dm_tip_back,
                     color: Colors.white,
                   ),
-                  onTap: () => HeaderControl.reportLiveDanmaku(
+                  onTap: () => HeaderControl.reportDanmaku(
                     context,
-                    roomId: (widget.bottomControl as live_bottom.BottomControl)
-                        .liveRoomCtr
-                        .roomId,
-                    msg: item.content.text,
                     extra: extra,
                     ctr: plPlayerController,
                   ),
                 ),
-              ],
-            },
-          ),
+              if (seekOffset != null)
+                _dmActionItem(
+                  const Icon(
+                    size: 18,
+                    Icons.gps_fixed_outlined,
+                    color: Colors.white,
+                  ),
+                  onTap: () => plPlayerController.seekTo(
+                    Duration(seconds: seekOffset),
+                    isSeek: false,
+                  ),
+                ),
+            ],
+            LiveDanmaku() => [
+              _dmActionItem(
+                const Icon(
+                  size: 20,
+                  MdiIcons.accountOutline,
+                  color: Colors.white,
+                ),
+                onTap: () => Get.toNamed('/member?mid=${extra.mid}'),
+              ),
+              _dmActionItem(
+                const Icon(
+                  size: 19,
+                  CustomIcons.player_dm_tip_copy,
+                  color: Colors.white,
+                ),
+                onTap: () => Utils.copyText(item.content.text),
+              ),
+              _dmActionItem(
+                const Icon(
+                  size: 20,
+                  CustomIcons.player_dm_tip_back,
+                  color: Colors.white,
+                ),
+                onTap: () => HeaderControl.reportLiveDanmaku(
+                  context,
+                  roomId: (widget.bottomControl as live_bottom.BottomControl)
+                      .liveRoomCtr
+                      .roomId,
+                  msg: item.content.text,
+                  extra: extra,
+                ),
+              ),
+            ],
+          },
         ),
       ),
     );
@@ -2540,6 +2504,7 @@ Widget buildSeekPreviewWidget(
   PlPlayerController plPlayerController,
   double maxWidth,
   double maxHeight,
+  ValueGetter<bool> isMounted,
 ) {
   return Obx(
     () {
@@ -2548,7 +2513,7 @@ Widget buildSeekPreviewWidget(
       }
 
       try {
-        VideoShotData data = plPlayerController.videoShot!.data;
+        final data = plPlayerController.videoShot!.data;
 
         final double scale =
             plPlayerController.isFullScreen.value &&
@@ -2590,20 +2555,18 @@ Widget buildSeekPreviewWidget(
                   imgXSize: imgXSize,
                   imgYSize: imgYSize,
                   height: height,
-                  image: plPlayerController.previewCache?[url]?.target,
-                  onCacheImg: (img) =>
-                      (plPlayerController.previewCache ??= {})[url] ??=
-                          WeakReference(img),
+                  imageCache: plPlayerController.previewCache,
                   onSetSize: (xSize, ySize) => data
                     ..imgXSize = imgXSize = xSize
                     ..imgYSize = imgYSize = ySize,
+                  isMounted: isMounted,
                 ),
               );
             },
           ),
         );
       } catch (e) {
-        if (kDebugMode) debugPrint('seek preview: $e');
+        if (kDebugMode) rethrow;
         return const SizedBox.shrink();
       }
     },
@@ -2613,26 +2576,26 @@ Widget buildSeekPreviewWidget(
 class VideoShotImage extends StatefulWidget {
   const VideoShotImage({
     super.key,
-    this.image,
+    required this.imageCache,
     required this.url,
     required this.x,
     required this.y,
     required this.imgXSize,
     required this.imgYSize,
     required this.height,
-    required this.onCacheImg,
     required this.onSetSize,
+    required this.isMounted,
   });
 
-  final ui.Image? image;
+  final Map<String, ui.Image?> imageCache;
   final String url;
   final int x;
   final int y;
   final double imgXSize;
   final double imgYSize;
   final double height;
-  final ValueChanged<ui.Image> onCacheImg;
   final Function(double imgXSize, double imgYSize) onSetSize;
+  final ValueGetter<bool> isMounted;
 
   @override
   State<VideoShotImage> createState() => _VideoShotImageState();
@@ -2641,26 +2604,22 @@ class VideoShotImage extends StatefulWidget {
 Future<ui.Image?> _getImg(String url) async {
   final cacheManager = DefaultCacheManager();
   final cacheKey = Utils.getFileName(url, fileExt: false);
-  final fileInfo = await cacheManager.getFileFromCache(cacheKey);
-  if (fileInfo != null) {
-    final bytes = await fileInfo.file.readAsBytes();
-    return _loadImg(bytes);
-  } else {
-    final res = await Request().get<Uint8List>(
+  try {
+    final fileInfo = await cacheManager.getSingleFile(
       url,
-      options: Options(responseType: ResponseType.bytes),
+      key: cacheKey,
+      headers: Constants.baseHeaders,
     );
-    if (res.statusCode == 200) {
-      final Uint8List data = res.data;
-      cacheManager.putFile(cacheKey, data, fileExtension: 'jpg');
-      return _loadImg(data);
-    }
+    return _loadImg(fileInfo.path);
+  } catch (_) {
+    return null;
   }
-  return null;
 }
 
-Future<ui.Image?> _loadImg(Uint8List bytes) async {
-  final codec = await ui.instantiateImageCodec(bytes);
+Future<ui.Image?> _loadImg(String path) async {
+  final codec = await ui.instantiateImageCodecFromBuffer(
+    await ImmutableBuffer.fromFilePath(path),
+  );
   final frame = await codec.getNextFrame();
   codec.dispose();
   return frame.image;
@@ -2668,6 +2627,7 @@ Future<ui.Image?> _loadImg(Uint8List bytes) async {
 
 class _VideoShotImageState extends State<VideoShotImage> {
   late Size _size;
+  late Rect _srcRect;
   late Rect _dstRect;
   late RRect _rrect;
   ui.Image? _image;
@@ -2693,14 +2653,17 @@ class _VideoShotImageState extends State<VideoShotImage> {
         final height = widget.height;
         final width = height * imgXSize / imgYSize;
         _setRect(width, height);
+        _setSrcRect(imgXSize, imgYSize);
         widget.onSetSize(imgXSize, imgYSize);
       } else {
         _setRect(double.nan, double.nan);
+        _setSrcRect(widget.imgXSize, widget.imgYSize);
       }
     } else {
       final height = widget.height;
       final width = height * widget.imgXSize / widget.imgYSize;
       _setRect(width, height);
+      _setSrcRect(widget.imgXSize, widget.imgYSize);
     }
   }
 
@@ -2710,19 +2673,36 @@ class _VideoShotImageState extends State<VideoShotImage> {
     _rrect = RRect.fromRectAndRadius(_dstRect, const Radius.circular(10));
   }
 
-  Future<void> _loadImg() async {
-    _image = widget.image;
+  void _setSrcRect(double imgXSize, double imgYSize) {
+    _srcRect = Rect.fromLTWH(
+      widget.x * imgXSize,
+      widget.y * imgYSize,
+      imgXSize,
+      imgYSize,
+    );
+  }
+
+  void _loadImg() {
+    final url = widget.url;
+    _image = widget.imageCache[url];
     if (_image != null) {
       _initSizeIfNeeded();
-      setState(() {});
-    } else {
-      final image = await _getImg(widget.url);
-      if (mounted && image != null) {
-        _image = image;
-        widget.onCacheImg(image);
-        _initSizeIfNeeded();
-        setState(() {});
-      }
+    } else if (!widget.imageCache.containsKey(url)) {
+      widget.imageCache[url] = null;
+      _getImg(url).then((image) {
+        if (image != null) {
+          if (widget.isMounted()) {
+            widget.imageCache[url] = image;
+          }
+          if (mounted) {
+            _image = image;
+            _initSizeIfNeeded();
+            setState(() {});
+          }
+        } else {
+          widget.imageCache.remove(url);
+        }
+      });
     }
   }
 
@@ -2731,6 +2711,9 @@ class _VideoShotImageState extends State<VideoShotImage> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.url != widget.url) {
       _loadImg();
+    }
+    if (oldWidget.x != widget.x || oldWidget.y != widget.y) {
+      _setSrcRect(widget.imgXSize, widget.imgYSize);
     }
   }
 
@@ -2743,101 +2726,56 @@ class _VideoShotImageState extends State<VideoShotImage> {
   @override
   Widget build(BuildContext context) {
     if (_image != null) {
-      return RepaintBoundary(
-        child: CustomPaint(
-          painter: _CroppedImagePainter(
-            image: _image!,
-            x: widget.x,
-            y: widget.y,
-            imgXSize: widget.imgXSize,
-            imgYSize: widget.imgYSize,
-            dstRect: _dstRect,
-            rrect: _rrect,
-            imgPaint: _imgPaint,
-            borderPaint: _borderPaint,
-          ),
-          size: _size,
-        ),
+      return CroppedImage(
+        size: _size,
+        image: _image!,
+        srcRect: _srcRect,
+        dstRect: _dstRect,
+        rrect: _rrect,
+        imgPaint: _imgPaint,
+        borderPaint: _borderPaint,
       );
     }
     return const SizedBox.shrink();
   }
 }
 
-class _CroppedImagePainter extends CustomPainter {
-  final ui.Image image;
-  final Rect srcRect;
-  final Rect dstRect;
-  final RRect rrect;
-  final Paint imgPaint;
-  final Paint borderPaint;
-
-  _CroppedImagePainter({
-    required this.image,
-    required int x,
-    required int y,
-    required double imgXSize,
-    required double imgYSize,
-    required this.dstRect,
-    required this.rrect,
-    required this.imgPaint,
-    required this.borderPaint,
-  }) : srcRect = Rect.fromLTWH(x * imgXSize, y * imgYSize, imgXSize, imgYSize);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas
-      ..drawImageRect(image, srcRect, dstRect, imgPaint)
-      ..drawRRect(rrect, borderPaint);
-  }
-
-  @override
-  bool shouldRepaint(_CroppedImagePainter oldDelegate) {
-    return oldDelegate.image != image || oldDelegate.srcRect != srcRect;
-  }
-}
-
-Widget buildViewPointWidget(
-  VideoDetailController videoDetailController,
-  PlPlayerController plPlayerController,
-  double offset,
-  double maxWidth,
-) {
-  return Container(
-    height: 16,
-    margin: EdgeInsets.only(bottom: offset),
-    child: Listener(
-      behavior: HitTestBehavior.opaque,
-      onPointerDown: (event) {
-        try {
-          double seg = event.localPosition.dx / maxWidth;
-          Segment item = videoDetailController.viewPointList
-              .where((item) => item.start >= seg)
-              .reduce((a, b) => a.start < b.start ? a : b);
-          if (item.from != null) {
-            plPlayerController
-              ..danmakuController?.clear()
-              ..videoPlayerController?.seek(Duration(seconds: item.from!));
-          }
-          // if (kDebugMode) debugPrint('${item.title},,${item.from}');
-        } catch (e) {
-          if (kDebugMode) debugPrint('$e');
-        }
-      },
-    ),
-  );
-}
-
 const double _triangleHeight = 5.6;
 
-class _DanmakuTipPainter extends CustomPainter {
+class _DanmakuTip extends SingleChildRenderObjectWidget {
+  const _DanmakuTip({
+    this.offset = 0,
+    super.child,
+  });
+
   final double offset;
 
-  const _DanmakuTipPainter({this.offset = 0});
+  @override
+  RenderObject createRenderObject(BuildContext context) {
+    return RenderDanmakuTip(offset: offset);
+  }
 
   @override
+  void updateRenderObject(BuildContext context, RenderDanmakuTip renderObject) {
+    renderObject.offset = offset;
+  }
+}
+
+class RenderDanmakuTip extends RenderProxyBox {
+  RenderDanmakuTip({
+    required double offset,
+  }) : _offset = offset;
+
+  double _offset;
+  double get offset => _offset;
+  set offset(double value) {
+    if (_offset == value) return;
+    _offset = value;
+    markNeedsPaint();
+  }
+
   @override
-  void paint(Canvas canvas, Size size) {
+  void paint(PaintingContext context, Offset offset) {
     final paint = Paint()
       ..color = const Color(0xB3000000)
       ..style = PaintingStyle.fill;
@@ -2850,7 +2788,7 @@ class _DanmakuTipPainter extends CustomPainter {
     final radius = size.height / 2;
     const triangleBase = _triangleHeight * 2 / 3;
 
-    final triangleCenterX = (size.width / 2 + offset).clamp(
+    final triangleCenterX = (size.width / 2 + _offset).clamp(
       radius + triangleBase,
       size.width - radius - triangleBase,
     );
@@ -2875,12 +2813,13 @@ class _DanmakuTipPainter extends CustomPainter {
       )
       ..close();
 
-    canvas
+    context.canvas
       ..drawPath(path, paint)
       ..drawPath(path, strokePaint);
+
+    super.paint(context, offset);
   }
 
   @override
-  bool shouldRepaint(covariant _DanmakuTipPainter oldDelegate) =>
-      oldDelegate.offset != offset;
+  bool get isRepaintBoundary => true;
 }
