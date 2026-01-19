@@ -118,30 +118,58 @@ abstract class CommonDynPageState<T extends StatefulWidget> extends State<T>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Obx(
-                () {
-                  final count = controller.count.value;
-                  return Text(
-                    '${count == -1 ? 0 : NumUtils.numFormat(count)}条回复',
-                  );
-                },
+              Flexible(
+                child: Obx(
+                  () {
+                    final count = controller.count.value;
+                    return Text(
+                      '${count == -1 ? 0 : NumUtils.numFormat(count)}条回复',
+                      overflow: TextOverflow.ellipsis,
+                    );
+                  },
+                ),
               ),
-              SizedBox(
-                height: 35,
-                child: TextButton.icon(
-                  onPressed: controller.queryBySort,
-                  icon: Icon(
-                    Icons.sort,
-                    size: 16,
-                    color: secondary,
-                  ),
-                  label: Obx(
-                    () => Text(
-                      controller.sortType.value.label,
-                      style: TextStyle(fontSize: 13, color: secondary),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    height: 35,
+                    child: Obx(
+                      () => TextButton.icon(
+                        onPressed: controller.toggleImageOnly,
+                        icon: Icon(
+                          controller.showImageOnly.value
+                              ? Icons.image
+                              : Icons.image_outlined,
+                          size: 16,
+                          color: secondary,
+                        ),
+                        label: Text(
+                          controller.showImageOnly.value ? '看全部' : '看图片',
+                          style: TextStyle(fontSize: 13, color: secondary),
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    height: 35,
+                    child: TextButton.icon(
+                      onPressed: controller.queryBySort,
+                      icon: Icon(
+                        Icons.sort,
+                        size: 16,
+                        color: secondary,
+                      ),
+                      label: Obx(
+                        () => Text(
+                          controller.sortType.value.label,
+                          style: TextStyle(fontSize: 13, color: secondary),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

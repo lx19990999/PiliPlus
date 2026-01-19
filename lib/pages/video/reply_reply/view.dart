@@ -259,38 +259,69 @@ class _VideoReplyReplyPanelState extends State<VideoReplyReplyPanel>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Obx(
-                () {
-                  final count = _controller.count.value;
-                  return count != -1
-                      ? Text(
-                          '相关回复共${NumUtils.numFormat(count)}条',
-                          style: const TextStyle(fontSize: 13),
-                        )
-                      : const SizedBox.shrink();
-                },
+              Flexible(
+                child: Obx(
+                  () {
+                    final count = _controller.count.value;
+                    return count != -1
+                        ? Text(
+                            '相关回复共${NumUtils.numFormat(count)}条',
+                            style: const TextStyle(fontSize: 13),
+                            overflow: TextOverflow.ellipsis,
+                          )
+                        : const SizedBox.shrink();
+                  },
+                ),
               ),
-              SizedBox(
-                height: 35,
-                child: TextButton.icon(
-                  onPressed: _controller.queryBySort,
-                  icon: Icon(
-                    Icons.sort,
-                    size: 16,
-                    color: theme.colorScheme.secondary,
-                  ),
-                  label: Obx(
-                    () => Text(
-                      _controller.mode.value == Mode.MAIN_LIST_HOT
-                          ? '按热度'
-                          : '按时间',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: theme.colorScheme.secondary,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    height: 35,
+                    child: Obx(
+                      () => TextButton.icon(
+                        onPressed: _controller.toggleImageOnly,
+                        icon: Icon(
+                          _controller.showImageOnly.value
+                              ? Icons.image
+                              : Icons.image_outlined,
+                          size: 16,
+                          color: theme.colorScheme.secondary,
+                        ),
+                        label: Text(
+                          _controller.showImageOnly.value ? '看全部' : '看图片',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: theme.colorScheme.secondary,
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    height: 35,
+                    child: TextButton.icon(
+                      onPressed: _controller.queryBySort,
+                      icon: Icon(
+                        Icons.sort,
+                        size: 16,
+                        color: theme.colorScheme.secondary,
+                      ),
+                      label: Obx(
+                        () => Text(
+                          _controller.mode.value == Mode.MAIN_LIST_HOT
+                              ? '按热度'
+                              : '按时间',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: theme.colorScheme.secondary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

@@ -23,6 +23,7 @@ abstract class ReplyController<R> extends CommonListController<R, ReplyInfo> {
 
   late final Rx<ReplySortType> sortType;
   late final Rx<Mode> mode;
+  final RxBool showImageOnly = false.obs; // 是否只显示图片/笔记评论
 
   final savedReplies = <Object, List<RichTextItem>?>{};
 
@@ -73,6 +74,21 @@ abstract class ReplyController<R> extends CommonListController<R, ReplyInfo> {
         data.replies.insert(0, data.upTop);
       }
     }
+    
+    // 如果只显示图片/笔记评论，进行过滤
+    if (showImageOnly.value) {
+      final filteredReplies = data.replies.where((reply) {
+        // 检查是否有图片
+        final hasPictures = reply.content.pictures.isNotEmpty;
+        // 检查是否有富文本笔记
+        final hasNote = reply.content.richText.hasNote();
+        return hasPictures || hasNote;
+      }).toList();
+      // 使用 clearField 和 addAll 来更新 replies
+      data.replies.clear();
+      data.replies.addAll(filteredReplies);
+    }
+    
     isEnd = data.cursor.isEnd;
     return false;
   }
@@ -99,6 +115,14 @@ abstract class ReplyController<R> extends CommonListController<R, ReplyInfo> {
         mode.value = Mode.MAIN_LIST_TIME;
         break;
     }
+    onReload();
+  }
+
+  // 切换图片/全部显示模式
+  void toggleImageOnly() {
+    if (isLoading) return;
+    feedBack();
+    showImageOnly.value = !showImageOnly.value;
     onReload();
   }
 

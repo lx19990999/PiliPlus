@@ -99,31 +99,64 @@ class _VideoReplyPanelState extends State<VideoReplyPanel>
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Obx(
-                            () => Text(
-                              _videoReplyController.sortType.value.title,
-                              style: const TextStyle(fontSize: 13),
+                          Flexible(
+                            child: Obx(
+                              () => Text(
+                                _videoReplyController.sortType.value.title,
+                                style: const TextStyle(fontSize: 13),
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                           ),
-                          SizedBox(
-                            height: 35,
-                            child: TextButton.icon(
-                              onPressed: _videoReplyController.queryBySort,
-                              icon: Icon(
-                                Icons.sort,
-                                size: 16,
-                                color: theme.colorScheme.secondary,
-                              ),
-                              label: Obx(
-                                () => Text(
-                                  _videoReplyController.sortType.value.label,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: theme.colorScheme.secondary,
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                height: 35,
+                                child: Obx(
+                                  () => TextButton.icon(
+                                    onPressed: _videoReplyController.toggleImageOnly,
+                                    icon: Icon(
+                                      _videoReplyController.showImageOnly.value
+                                          ? Icons.image
+                                          : Icons.image_outlined,
+                                      size: 16,
+                                      color: theme.colorScheme.secondary,
+                                    ),
+                                    label: Text(
+                                      _videoReplyController.showImageOnly.value
+                                          ? '看全部'
+                                          : '看图片',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: theme.colorScheme.secondary,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
+                              const SizedBox(width: 8),
+                              SizedBox(
+                                height: 35,
+                                child: TextButton.icon(
+                                  onPressed: _videoReplyController.queryBySort,
+                                  icon: Icon(
+                                    Icons.sort,
+                                    size: 16,
+                                    color: theme.colorScheme.secondary,
+                                  ),
+                                  label: Obx(
+                                    () => Text(
+                                      _videoReplyController.sortType.value.label,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: theme.colorScheme.secondary,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
