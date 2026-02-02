@@ -2,6 +2,7 @@ import 'package:PiliPlus/common/skeleton/msg_feed_sys_msg_.dart';
 import 'package:PiliPlus/common/widgets/dialog/dialog.dart';
 import 'package:PiliPlus/common/widgets/flutter/list_tile.dart';
 import 'package:PiliPlus/common/widgets/flutter/refresh_indicator.dart';
+import 'package:PiliPlus/common/widgets/gesture/tap_gesture_recognizer.dart';
 import 'package:PiliPlus/common/widgets/loading_widget/http_error.dart';
 import 'package:PiliPlus/http/loading_state.dart';
 import 'package:PiliPlus/models_new/msg/msg_sys/data.dart';
@@ -10,7 +11,6 @@ import 'package:PiliPlus/utils/app_scheme.dart';
 import 'package:PiliPlus/utils/id_utils.dart';
 import 'package:PiliPlus/utils/page_utils.dart';
 import 'package:PiliPlus/utils/platform_utils.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart' hide ListTile;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
@@ -23,8 +23,9 @@ class SysMsgPage extends StatefulWidget {
 }
 
 class _SysMsgPageState extends State<SysMsgPage> {
-  late final _sysMsgController = Get.put(SysMsgController());
-  late final RegExp urlRegExp = RegExp(
+  final _sysMsgController = Get.put(SysMsgController());
+
+  static final RegExp _urlRegExp = RegExp(
     r'#\{([^}]*)\}\{([^}]*)\}|https?:\/\/[^\s/\$.?#].[^\s]*|www\.[^\s/\$.?#].[^\s]*|【(.*?)】|（(\d+)）',
   );
 
@@ -135,7 +136,7 @@ class _SysMsgPageState extends State<SysMsgPage> {
   InlineSpan _buildContent(ThemeData theme, String content) {
     final List<InlineSpan> spanChildren = <InlineSpan>[];
     content.splitMapJoin(
-      urlRegExp,
+      _urlRegExp,
       onMatch: (Match match) {
         final matchStr = match[0]!;
         if (matchStr.startsWith('#')) {
@@ -145,7 +146,7 @@ class _SysMsgPageState extends State<SysMsgPage> {
               TextSpan(
                 text: match[1],
                 style: TextStyle(color: theme.colorScheme.primary),
-                recognizer: TapGestureRecognizer()
+                recognizer: NoDeadlineTapGestureRecognizer()
                   ..onTap = () {
                     try {
                       PiliScheme.routePushFromUrl(url);
@@ -176,7 +177,7 @@ class _SysMsgPageState extends State<SysMsgPage> {
                 TextSpan(
                   text: match[3],
                   style: TextStyle(color: theme.colorScheme.primary),
-                  recognizer: TapGestureRecognizer()
+                  recognizer: NoDeadlineTapGestureRecognizer()
                     ..onTap = () {
                       PiliScheme.videoPush(validAv, validBv);
                     },
@@ -195,7 +196,7 @@ class _SysMsgPageState extends State<SysMsgPage> {
                 TextSpan(
                   text: '查看动态',
                   style: TextStyle(color: theme.colorScheme.primary),
-                  recognizer: TapGestureRecognizer()
+                  recognizer: NoDeadlineTapGestureRecognizer()
                     ..onTap = () {
                       PageUtils.pushDynFromId(id: dynId).catchError(
                         (err) => SmartDialog.showToast(err.toString()),
@@ -212,7 +213,7 @@ class _SysMsgPageState extends State<SysMsgPage> {
             TextSpan(
               text: '\u{1F517}网页链接',
               style: TextStyle(color: theme.colorScheme.primary),
-              recognizer: TapGestureRecognizer()
+              recognizer: NoDeadlineTapGestureRecognizer()
                 ..onTap = () {
                   PiliScheme.routePushFromUrl(matchStr);
                 },

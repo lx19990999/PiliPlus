@@ -15,26 +15,29 @@
  * along with PiliPlus.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'dart:ui' as ui;
+
 import 'package:flutter/foundation.dart' show listEquals, kDebugMode;
 import 'package:flutter/gestures.dart' show TapGestureRecognizer;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show BoxHitTestEntry;
 
+@immutable
 sealed class BaseSegment {
-  final double start;
   final double end;
 
-  BaseSegment({
-    required this.start,
+  const BaseSegment({
     required this.end,
   });
 }
 
+@immutable
 class Segment extends BaseSegment {
+  final double start;
   final Color color;
 
-  Segment({
-    required super.start,
+  const Segment({
+    required this.start,
     required super.end,
     required this.color,
   });
@@ -54,14 +57,14 @@ class Segment extends BaseSegment {
   int get hashCode => Object.hash(start, end, color);
 }
 
+@immutable
 class ViewPointSegment extends BaseSegment {
   final String? title;
   final String? url;
   final int? from;
   final int? to;
 
-  ViewPointSegment({
-    required super.start,
+  const ViewPointSegment({
     required super.end,
     this.title,
     this.url,
@@ -75,8 +78,7 @@ class ViewPointSegment extends BaseSegment {
       return true;
     }
     if (other is ViewPointSegment) {
-      return start == other.start &&
-          end == other.end &&
+      return end == other.end &&
           title == other.title &&
           url == other.url &&
           from == other.from &&
@@ -86,13 +88,13 @@ class ViewPointSegment extends BaseSegment {
   }
 
   @override
-  int get hashCode => Object.hash(start, end, title, url, from, to);
+  int get hashCode => Object.hash(end, title, url, from, to);
 }
 
 class SegmentProgressBar extends BaseSegmentProgressBar<Segment> {
   const SegmentProgressBar({
     super.key,
-    super.height = 3.5,
+    super.height,
     required super.segments,
   });
 
@@ -125,10 +127,10 @@ class RenderProgressBar extends BaseRenderProgressBar<Segment> {
       if (segmentEnd > segmentStart ||
           (segmentEnd == segmentStart && segmentStart > 0)) {
         canvas.drawRect(
-          Rect.fromLTWH(
+          Rect.fromLTRB(
             segmentStart,
             0,
-            segmentEnd == segmentStart ? 2 : segmentEnd - segmentStart,
+            segmentEnd == segmentStart ? segmentStart + 2 : segmentEnd,
             size.height,
           ),
           paint,
@@ -142,7 +144,7 @@ class ViewPointSegmentProgressBar
     extends BaseSegmentProgressBar<ViewPointSegment> {
   const ViewPointSegmentProgressBar({
     super.key,
-    super.height = 3.5,
+    super.height,
     required super.segments,
     this.onSeek,
   });
@@ -183,11 +185,36 @@ class RenderViewPointProgressBar
     }
   }
 
-  static const double barHeight = 15.0;
-
   @override
-  Size computeDryLayout(BoxConstraints constraints) {
-    return constraints.constrain(Size(constraints.maxWidth, barHeight));
+  void performLayout() {
+    size = constraints.constrainDimensions(constraints.maxWidth, _barHeight);
+  }
+
+  static const double _barHeight = 15.0;
+  static const double _dividerWidth = 2.0;
+
+  static ui.Paragraph _getParagraph(String title, double size) {
+    final builder =
+        ui.ParagraphBuilder(
+            ui.ParagraphStyle(
+              textDirection: .ltr,
+              strutStyle: ui.StrutStyle(
+                leading: 0,
+                height: 1,
+                fontSize: size,
+              ),
+            ),
+          )
+          ..pushStyle(
+            ui.TextStyle(
+              color: Colors.white,
+              fontSize: size,
+              height: 1,
+            ),
+          )
+          ..addText(title);
+    return builder.build()
+      ..layout(const ui.ParagraphConstraints(width: double.infinity));
   }
 
   @override
@@ -197,67 +224,53 @@ class RenderViewPointProgressBar
     final paint = Paint()..style = PaintingStyle.fill;
 
     canvas.drawRect(
-      Rect.fromLTWH(0, 0, size.width, barHeight),
+      Rect.fromLTRB(0, 0, size.width, _barHeight),
       paint..color = Colors.grey[600]!.withValues(alpha: 0.45),
     );
 
     paint.color = Colors.black.withValues(alpha: 0.5);
 
-    for (int index = 0; index < segments.length; index++) {
-      final isFirst = index == 0;
-      final item = segments[index];
-      final segmentStart = item.start * size.width;
-      final segmentEnd = item.end * size.width;
+    double prevEnd = 0.0;
+    for (final segment in segments) {
+      final segmentEnd = segment.end * size.width;
+      canvas.drawRect(
+        Rect.fromLTRB(
+          segmentEnd,
+          0,
+          segmentEnd + _dividerWidth,
+          _barHeight + height,
+        ),
+        paint,
+      );
+      final title = segment.title;
+      if (title != null && title.isNotEmpty) {
+        final segmentWidth = segmentEnd - prevEnd;
+        final paragraph = _getParagraph(title, 10);
+        final textWidth = paragraph.maxIntrinsicWidth;
+        final textHeight = paragraph.height;
 
-      if (segmentEnd > segmentStart ||
-          (segmentEnd == segmentStart && segmentStart > 0)) {
-        double fontSize = 10;
-
-        TextPainter getTextPainter() => TextPainter(
-          text: TextSpan(
-            text: item.title,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: fontSize,
-              height: 1,
-            ),
-          ),
-          strutStyle: StrutStyle(leading: 0, height: 1, fontSize: fontSize),
-          textDirection: TextDirection.ltr,
-        )..layout();
-
-        TextPainter textPainter = getTextPainter();
-
-        late double prevStart;
-        if (!isFirst) {
-          prevStart = segments[index - 1].start * size.width;
+        final isOverflow = textWidth > segmentWidth;
+        final Offset offset;
+        if (isOverflow) {
+          final scale = segmentWidth / textWidth;
+          canvas
+            ..save()
+            ..translate(prevEnd, (_barHeight - textHeight * scale) / 2)
+            ..scale(scale);
+          offset = Offset.zero;
+        } else {
+          offset = Offset(
+            (segmentWidth - textWidth) / 2 + prevEnd,
+            (_barHeight - textHeight) / 2,
+          );
         }
-        final width = isFirst ? segmentStart : segmentStart - prevStart;
-
-        while (textPainter.width > width - 2 && fontSize >= 2) {
-          fontSize -= 0.5;
-          textPainter.dispose();
-          textPainter = getTextPainter();
+        canvas.drawParagraph(paragraph, offset);
+        paragraph.dispose();
+        if (isOverflow) {
+          canvas.restore();
         }
-
-        canvas.drawRect(
-          Rect.fromLTWH(
-            segmentStart,
-            0,
-            segmentEnd == segmentStart ? 2 : segmentEnd - segmentStart,
-            barHeight + height,
-          ),
-          paint,
-        );
-
-        final textX = isFirst
-            ? (segmentStart - textPainter.width) / 2
-            : (segmentStart - prevStart - textPainter.width) / 2 +
-                  prevStart +
-                  1;
-        final textY = (barHeight - textPainter.height) / 2;
-        textPainter.paint(canvas, Offset(textX, textY));
       }
+      prevEnd = segmentEnd + _dividerWidth;
     }
   }
 
@@ -296,8 +309,8 @@ class RenderViewPointProgressBar
     try {
       final seg = details.localPosition.dx / size.width;
       final item = _segments
-          .where((item) => item.start >= seg)
-          .reduce((a, b) => a.start < b.start ? a : b);
+          .where((item) => item.end >= seg)
+          .reduce((a, b) => a.end < b.end ? a : b);
       if (item.from case final from?) {
         _onSeek?.call(Duration(seconds: from));
       }
@@ -334,7 +347,6 @@ class BaseRenderProgressBar<T extends BaseSegment> extends RenderBox {
   BaseRenderProgressBar({
     required double height,
     required List<T> segments,
-    ValueSetter<int>? onSeek,
   }) : _height = height,
        _segments = segments;
 
@@ -356,12 +368,7 @@ class BaseRenderProgressBar<T extends BaseSegment> extends RenderBox {
 
   @override
   void performLayout() {
-    size = computeDryLayout(constraints);
-  }
-
-  @override
-  Size computeDryLayout(BoxConstraints constraints) {
-    return constraints.constrain(Size(constraints.maxWidth, height));
+    size = constraints.constrainDimensions(constraints.maxWidth, height);
   }
 
   @override

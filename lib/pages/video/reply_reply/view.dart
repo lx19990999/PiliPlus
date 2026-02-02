@@ -94,7 +94,6 @@ class _VideoReplyReplyPanelState extends State<VideoReplyReplyPanel>
     with SingleTickerProviderStateMixin, CommonSlideMixin {
   late VideoReplyReplyController _controller;
   late final _tag = Utils.makeHeroTag('${widget.rpid}${widget.dialog}');
-  CurvedAnimation? _curvedAnimation;
   Animation<Color?>? _colorAnimation;
 
   late final bool isDialogue = widget.dialog != null;
@@ -129,7 +128,6 @@ class _VideoReplyReplyPanelState extends State<VideoReplyReplyPanel>
 
   @override
   void dispose() {
-    _curvedAnimation?.dispose();
     Get.delete<VideoReplyReplyController>(tag: _tag);
     super.dispose();
   }
@@ -226,11 +224,7 @@ class _VideoReplyReplyPanelState extends State<VideoReplyReplyPanel>
             replyItem: firstFloor,
             replyLevel: 2,
             needDivider: false,
-            onReply: (replyItem) => _controller.onReply(
-              context,
-              replyItem: replyItem,
-              index: -1,
-            ),
+            onReply: (replyItem) => _controller.onReply(replyItem, index: -1),
             upMid: _controller.upMid,
             onCheckReply: (item) =>
                 _controller.onCheckReply(item, isManual: true),
@@ -365,16 +359,16 @@ class _VideoReplyReplyPanelState extends State<VideoReplyReplyPanel>
           final child = _replyItem(context, response[index], index);
           if (jumpIndex == index) {
             return AnimatedBuilder(
-              animation: _colorAnimation ??=
-                  ColorTween(
-                    begin: theme.colorScheme.onInverseSurface,
-                    end: theme.colorScheme.surface,
-                  ).animate(
-                    _curvedAnimation ??= CurvedAnimation(
-                      parent: _controller.animController,
-                      curve: const Interval(0.8, 1.0), // 前0.8s不变, 后0.2s开始动画
-                    ),
+              animation: _colorAnimation ??= _controller.animController.drive(
+                ColorTween(
+                  begin: theme.colorScheme.onInverseSurface,
+                  end: theme.colorScheme.surface,
+                ).chain(
+                  CurveTween(
+                    curve: const Interval(0.8, 1.0), // 前0.8s不变, 后0.2s开始动画
                   ),
+                ),
+              ),
               child: child,
               builder: (context, child) {
                 return ColoredBox(
@@ -399,8 +393,7 @@ class _VideoReplyReplyPanelState extends State<VideoReplyReplyPanel>
     return ReplyItemGrpc(
       replyItem: replyItem,
       replyLevel: isDialogue ? 3 : 2,
-      onReply: (replyItem) =>
-          _controller.onReply(this.context, replyItem: replyItem, index: index),
+      onReply: (replyItem) => _controller.onReply(replyItem, index: index),
       onDelete: (item, subIndex) => _controller.onRemove(index, item, null),
       upMid: _controller.upMid,
       showDialogue: () => Scaffold.of(context).showBottomSheet(

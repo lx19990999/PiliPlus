@@ -59,28 +59,28 @@ class _AboutPageState extends State<AboutPage> {
     super.dispose();
   }
 
-  Future<void> getCacheSize() async {
-    cacheSize.value = CacheManager.formatSize(
-      await CacheManager.loadApplicationCache(),
-    );
+  void getCacheSize() {
+    CacheManager.loadApplicationCache().then((res) {
+      if (mounted) {
+        cacheSize.value = CacheManager.formatSize(res);
+      }
+    });
   }
 
   void _showDialog() => showDialog(
     context: context,
-    builder: (context) {
-      return AlertDialog(
-        constraints: StyleString.dialogFixedConstraints,
-        content: TextField(
-          autofocus: true,
-          onSubmitted: (value) {
-            Get.back();
-            if (value.isNotEmpty) {
-              PageUtils.handleWebview(value, inApp: true);
-            }
-          },
-        ),
-      );
-    },
+    builder: (context) => AlertDialog(
+      constraints: StyleString.dialogFixedConstraints,
+      content: TextField(
+        autofocus: true,
+        onSubmitted: (value) {
+          Get.back();
+          if (value.isNotEmpty) {
+            PageUtils.handleWebview(value, inApp: true);
+          }
+        },
+      ),
+    ),
   );
 
   @override
@@ -103,20 +103,18 @@ class _AboutPageState extends State<AboutPage> {
         children: [
           GestureDetector(
             onTap: () {
-              _pressCount++;
-              if (_pressCount == 5) {
+              if (++_pressCount == 5) {
                 _pressCount = 0;
                 _showDialog();
               }
             },
             onSecondaryTap: PlatformUtils.isDesktop ? _showDialog : null,
-            child: ExcludeSemantics(
-              child: Image.asset(
-                width: 150,
-                height: 150,
-                cacheWidth: 150.cacheSize(context),
-                'assets/images/logo/logo.png',
-              ),
+            child: Image.asset(
+              width: 150,
+              height: 150,
+              excludeFromSemantics: true,
+              cacheWidth: 150.cacheSize(context),
+              'assets/images/logo/logo.png',
             ),
           ),
           ListTile(
@@ -454,61 +452,59 @@ Future<void> showImportExportDialog<T>(
 
             showDialog(
               context: context,
-              builder: (context) {
-                return AlertDialog(
-                  title: Text('输入$title'),
-                  constraints: StyleString.dialogFixedConstraints,
-                  content: TextFormField(
-                    key: key,
-                    minLines: 4,
-                    maxLines: 12,
-                    autofocus: true,
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
-                      errorMaxLines: 3,
-                    ),
-                    validator: (value) {
-                      if (forceErrorText != null) return forceErrorText;
-                      try {
-                        json = jsonDecode(value!) as T;
-                        return null;
-                      } catch (e) {
-                        if (e is FormatException) {}
-                        return '解析json失败：$e';
-                      }
-                    },
+              builder: (context) => AlertDialog(
+                title: Text('输入$title'),
+                constraints: StyleString.dialogFixedConstraints,
+                content: TextFormField(
+                  key: key,
+                  minLines: 4,
+                  maxLines: 12,
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    errorMaxLines: 3,
                   ),
-                  actions: [
-                    TextButton(
-                      onPressed: Get.back,
-                      child: Text(
-                        '取消',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.outline,
-                        ),
+                  validator: (value) {
+                    if (forceErrorText != null) return forceErrorText;
+                    try {
+                      json = jsonDecode(value!) as T;
+                      return null;
+                    } catch (e) {
+                      if (e is FormatException) {}
+                      return '解析json失败：$e';
+                    }
+                  },
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: Get.back,
+                    child: Text(
+                      '取消',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.outline,
                       ),
                     ),
-                    TextButton(
-                      onPressed: () async {
-                        if (key.currentState?.validate() == true) {
-                          try {
-                            if (await fromJson(json)) {
-                              Get.back();
-                              SmartDialog.showToast('导入成功');
-                              return;
-                            }
-                          } catch (e) {
-                            forceErrorText = '导入失败：$e';
+                  ),
+                  TextButton(
+                    onPressed: () async {
+                      if (key.currentState?.validate() == true) {
+                        try {
+                          if (await fromJson(json)) {
+                            Get.back();
+                            SmartDialog.showToast('导入成功');
+                            return;
                           }
-                          key.currentState?.validate();
-                          forceErrorText = null;
+                        } catch (e) {
+                          forceErrorText = '导入失败：$e';
                         }
-                      },
-                      child: const Text('确定'),
-                    ),
-                  ],
-                );
-              },
+                        key.currentState?.validate();
+                        forceErrorText = null;
+                      }
+                    },
+                    child: const Text('确定'),
+                  ),
+                ],
+              ),
             );
           },
         ),

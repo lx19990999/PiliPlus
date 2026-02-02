@@ -85,7 +85,7 @@ class _VideoReplyPanelState extends State<VideoReplyPanel>
                       parent: ClampingScrollPhysics(),
                     )
                   : const AlwaysScrollableScrollPhysics(),
-              key: const PageStorageKey<String>('评论'),
+              key: const PageStorageKey(_VideoReplyPanelState),
               slivers: <Widget>[
                 SliverPersistentHeader(
                   pinned: false,
@@ -181,7 +181,7 @@ class _VideoReplyPanelState extends State<VideoReplyPanel>
                   onPressed: () {
                     feedBack();
                     _videoReplyController.onReply(
-                      context,
+                      null,
                       oid: _videoReplyController.aid,
                       replyType: _videoReplyController.videoType.replyType,
                     );
@@ -237,10 +237,7 @@ class _VideoReplyPanelState extends State<VideoReplyPanel>
                       replyItem: response[index],
                       replyLevel: widget.replyLevel,
                       replyReply: replyReply,
-                      onReply: (replyItem) => _videoReplyController.onReply(
-                        context,
-                        replyItem: replyItem,
-                      ),
+                      onReply: _videoReplyController.onReply,
                       onDelete: (item, subIndex) =>
                           _videoReplyController.onRemove(index, item, subIndex),
                       upMid: _videoReplyController.upMid,

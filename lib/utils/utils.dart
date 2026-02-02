@@ -99,7 +99,7 @@ abstract final class Utils {
   static Future<Rect?> get sharePositionOrigin async {
     if (await isIpad) {
       final size = Get.size;
-      return Rect.fromLTWH(0, 0, size.width, size.height / 2);
+      return Rect.fromLTRB(0, 0, size.width, size.height / 2);
     }
     return null;
   }
@@ -163,9 +163,27 @@ abstract final class Utils {
   }
 
   static String getFileName(String uri, {bool fileExt = true}) {
-    final i0 = uri.lastIndexOf('/') + 1;
-    final i1 = fileExt ? uri.length : uri.lastIndexOf('.');
-    return uri.substring(i0, i1);
+    int slash = -1;
+    int dot = -1;
+    int qMark = uri.length;
+
+    loop:
+    for (int index = uri.length - 1; index >= 0; index--) {
+      switch (uri.codeUnitAt(index)) {
+        case 0x2F: // `/`
+          slash = index;
+          break loop;
+        case 0x2E: // `.`
+          if (dot == -1) dot = index;
+          break;
+        case 0x3F: // `?`
+          qMark = index;
+          if (dot > qMark) dot = -1;
+          break;
+      }
+    }
+    RangeError.checkNotNegative(slash, '/');
+    return uri.substring(slash + 1, (fileExt || dot == -1) ? qMark : dot);
   }
 
   /// When calling this from a `catch` block consider annotating the method

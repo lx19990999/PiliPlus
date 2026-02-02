@@ -288,9 +288,14 @@ class LiveRoomController extends GetxController {
             ),
           ),
           TextButton(
-            onPressed: () => Get
-              ..back()
-              ..back(),
+            onPressed: () {
+              if (plPlayerController.isDesktopPip) {
+                plPlayerController.exitDesktopPip();
+              }
+              Get
+                ..back()
+                ..back();
+            },
             child: const Text('退出'),
           ),
         ],
@@ -405,7 +410,7 @@ class LiveRoomController extends GetxController {
   }
 
   // 修改画质
-  FutureOr<void> changeQn(int qn) {
+  Future<void>? changeQn(int qn) {
     if (currentQn == qn) {
       return null;
     }

@@ -1,5 +1,7 @@
 import 'package:PiliPlus/common/widgets/appbar/appbar.dart';
+import 'package:PiliPlus/common/widgets/flutter/page/tabs.dart';
 import 'package:PiliPlus/common/widgets/flutter/refresh_indicator.dart';
+import 'package:PiliPlus/common/widgets/gesture/horizontal_drag_gesture_recognizer.dart';
 import 'package:PiliPlus/common/widgets/keep_alive_wrapper.dart';
 import 'package:PiliPlus/common/widgets/loading_widget/http_error.dart';
 import 'package:PiliPlus/common/widgets/scroll_physics.dart';
@@ -10,7 +12,7 @@ import 'package:PiliPlus/pages/history/controller.dart';
 import 'package:PiliPlus/pages/history/widgets/item.dart';
 import 'package:PiliPlus/utils/extension/scroll_controller_ext.dart';
 import 'package:PiliPlus/utils/grid.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide TabBarView;
 import 'package:get/get.dart';
 
 class HistoryPage extends StatefulWidget {
@@ -24,10 +26,16 @@ class HistoryPage extends StatefulWidget {
 
 class _HistoryPageState extends State<HistoryPage>
     with AutomaticKeepAliveClientMixin, GridMixin {
-  late final _historyController = Get.put(
-    HistoryController(widget.type),
-    tag: widget.type ?? 'all',
-  );
+  late final HistoryController _historyController;
+
+  @override
+  void initState() {
+    super.initState();
+    _historyController = Get.put(
+      HistoryController(widget.type),
+      tag: widget.type ?? 'all',
+    );
+  }
 
   HistoryController currCtr([int? index]) {
     try {
@@ -125,11 +133,13 @@ class _HistoryPageState extends State<HistoryPage>
                       ],
                     ),
                     Expanded(
-                      child: TabBarView(
+                      child: TabBarView<CustomHorizontalDragGestureRecognizer>(
                         physics: enableMultiSelect
                             ? const NeverScrollableScrollPhysics()
                             : const CustomTabBarViewScrollPhysics(),
                         controller: _historyController.tabController,
+                        horizontalDragGestureRecognizer:
+                            CustomHorizontalDragGestureRecognizer(),
                         children: [
                           KeepAliveWrapper(builder: (context) => child),
                           ..._historyController.tabs.map(

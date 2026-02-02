@@ -25,10 +25,16 @@ class SearchPage extends StatefulWidget {
 
 class _SearchPageState extends State<SearchPage> {
   final _tag = Utils.generateRandomString(6);
-  late final SSearchController _searchController = Get.put(
-    SSearchController(_tag),
-    tag: _tag,
-  );
+  late final SSearchController _searchController;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = Get.put(
+      SSearchController(_tag),
+      tag: _tag,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -312,9 +318,14 @@ class _SearchPageState extends State<SearchPage> {
                           child: IconButton(
                             iconSize: 22,
                             tooltip: enable ? '记录搜索' : '无痕搜索',
-                            icon: enable
-                                ? historyIcon(theme)
-                                : historyIcon(theme).disable(),
+                            icon: DisabledIcon(
+                              disable: !enable,
+                              child: Icon(
+                                Icons.history,
+                                color: theme.colorScheme.onSurfaceVariant
+                                    .withValues(alpha: 0.8),
+                              ),
+                            ),
                             style: IconButton.styleFrom(
                               padding: EdgeInsets.zero,
                             ),
@@ -404,11 +415,6 @@ class _SearchPageState extends State<SearchPage> {
         },
       ),
     ),
-  );
-
-  Icon historyIcon(ThemeData theme) => Icon(
-    Icons.history,
-    color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
   );
 
   Widget _buildHotKey(

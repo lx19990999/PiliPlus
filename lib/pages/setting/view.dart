@@ -44,7 +44,7 @@ class _SettingPageState extends State<SettingPage> {
   final RxBool _noAccount = Accounts.account.isEmpty.obs;
   late bool _isPortrait;
 
-  final List<_SettingsModel> _items = const [
+  static const List<_SettingsModel> _items = [
     _SettingsModel(
       type: SettingType.privacySetting,
       subtitle: '黑名单、无痕模式',
@@ -214,15 +214,13 @@ class _SettingPageState extends State<SettingPage> {
   Future<void> _logoutDialog(BuildContext context) async {
     final result = await showDialog<Set<LoginAccount>>(
       context: context,
-      builder: (context) {
-        return MultiSelectDialog<LoginAccount>(
-          title: '选择要登出的账号uid',
-          initValues: const Iterable.empty(),
-          values: {
-            for (final i in Accounts.account.values) i: i.mid.toString(),
-          },
-        );
-      },
+      builder: (context) => MultiSelectDialog<LoginAccount>(
+        title: '选择要登出的账号uid',
+        initValues: const Iterable.empty(),
+        values: {
+          for (final i in Accounts.account.values) i: i.mid.toString(),
+        },
+      ),
     );
     if (!context.mounted || result == null || result.isEmpty) return;
     Future<void> logout() {
