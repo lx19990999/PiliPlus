@@ -73,17 +73,19 @@ jobs:
             android/*.gradle*
             android/**/gradle-wrapper.properties
 
-            - name: 安装Flutter
-              uses: subosito/flutter-action@v2
-              id: flutter-action
-              with:
-                  channel: stable
-                  flutter-version: "3.38.6"
-                  cache: true
+      - name: 安装Flutter
+        uses: subosito/flutter-action@v2
+        id: flutter-action
+        with:
+          channel: stable
+          flutter-version: "3.38.6"
+          cache: true
 
       - name: apply bottom sheet patch
-        working-directory: ${{ env.FLUTTER_ROOT }}
-        run: git apply $GITHUB_WORKSPACE/lib/scripts/bottom_sheet_patch.diff
+        run: |
+          if [ -d "$FLUTTER_ROOT" ]; then
+            cd "$FLUTTER_ROOT" && git apply $GITHUB_WORKSPACE/lib/scripts/bottom_sheet_patch.diff || true
+          fi
         continue-on-error: true
 
       - name: Write key
