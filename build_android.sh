@@ -336,6 +336,26 @@ if [ -f "lib/scripts/build.sh" ]; then
     if bash lib/scripts/build.sh android 2>&1 | tee -a "$logFile"; then
         if [ -f "pili_release.json" ]; then
             write_build_log "版本信息设置完成" "$GREEN"
+            # 读取并输出版本信息
+            if command -v jq >/dev/null 2>&1; then
+                versionName=$(jq -r '.["pili.name"]' pili_release.json)
+                versionCode=$(jq -r '.["pili.code"]' pili_release.json)
+                commitHash=$(jq -r '.["pili.hash"]' pili_release.json)
+                buildTime=$(jq -r '.["pili.time"]' pili_release.json)
+                buildTimeFormatted=$(date -d "@$buildTime" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || date -r "$buildTime" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || echo "$buildTime")
+                write_build_log "  版本名称: $versionName" "$CYAN"
+                write_build_log "  版本代码: $versionCode" "$CYAN"
+                write_build_log "  提交哈希: $commitHash" "$CYAN"
+                write_build_log "  构建时间: $buildTimeFormatted" "$CYAN"
+            else
+                # 如果没有 jq，使用 grep 和 sed 提取
+                versionName=$(grep -o '"pili\.name": "[^"]*"' pili_release.json | sed 's/"pili\.name": "\(.*\)"/\1/')
+                versionCode=$(grep -o '"pili\.code": [0-9]*' pili_release.json | sed 's/"pili\.code": //')
+                commitHash=$(grep -o '"pili\.hash": "[^"]*"' pili_release.json | sed 's/"pili\.hash": "\(.*\)"/\1/')
+                write_build_log "  版本名称: $versionName" "$CYAN"
+                write_build_log "  版本代码: $versionCode" "$CYAN"
+                write_build_log "  提交哈希: $commitHash" "$CYAN"
+            fi
         else
             write_build_log "版本信息设置失败：找不到 pili_release.json" "$RED"
             exit 1
@@ -356,8 +376,18 @@ androidStart=$(date +%s)
 
 # 构建并实时显示输出，同时保存到日志
 # 使用 --no-pub 避免重复解析依赖（已在第4步完成）
+# 使用 --dart-define-from-file 传递版本信息
 set +e  # 暂时关闭错误退出，以便捕获退出码
-flutter build apk --release --split-per-abi --no-pub 2>&1 | tee -a "$logFile" | while IFS= read -r line; do
+
+# 构建命令，根据是否存在 pili_release.json 决定是否添加版本信息参数
+if [ -f "pili_release.json" ]; then
+    buildCmd="flutter build apk --release --split-per-abi --no-pub --dart-define-from-file=pili_release.json"
+else
+    write_build_log "警告: 未找到 pili_release.json，版本信息可能不完整" "$YELLOW"
+    buildCmd="flutter build apk --release --split-per-abi --no-pub"
+fi
+
+$buildCmd 2>&1 | tee -a "$logFile" | while IFS= read -r line; do
     echo "$line"
     # 高亮显示关键信息
     if echo "$line" | grep -qE "Running Gradle|Building|Compiling|Linking|Generating|Downloading|Installing"; then

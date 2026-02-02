@@ -358,7 +358,6 @@ class MemberVideoCtr
                       part: page.part,
                       duration: page.duration,
                       vid: page.vid,
-                      weblink: page.weblink,
                     );
 
                     // 调用下载方法
@@ -387,7 +386,7 @@ class MemberVideoCtr
                     cid: item.cid,
                     page: 1,
                     from: 'local',
-                    part: item.title ?? '',
+                    part: item.title,
                     duration: item.duration,
                   );
 
