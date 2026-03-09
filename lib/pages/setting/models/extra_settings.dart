@@ -5,8 +5,8 @@ import 'package:PiliPlus/common/widgets/custom_icon.dart';
 import 'package:PiliPlus/common/widgets/flutter/refresh_indicator.dart';
 import 'package:PiliPlus/common/widgets/gesture/horizontal_drag_gesture_recognizer.dart'
     show touchSlopH;
-import 'package:PiliPlus/common/widgets/image/custom_grid_view.dart'
-    show CustomGridView, ImageModel;
+import 'package:PiliPlus/common/widgets/image_grid/image_grid_view.dart'
+    show ImageGridView, ImageModel;
 import 'package:PiliPlus/common/widgets/pendant_avatar.dart';
 import 'package:PiliPlus/grpc/reply.dart';
 import 'package:PiliPlus/http/fav.dart';
@@ -24,7 +24,7 @@ import 'package:PiliPlus/pages/home/controller.dart';
 import 'package:PiliPlus/pages/main/controller.dart';
 import 'package:PiliPlus/pages/setting/models/model.dart';
 import 'package:PiliPlus/pages/setting/widgets/select_dialog.dart';
-import 'package:PiliPlus/pages/setting/widgets/slide_dialog.dart';
+import 'package:PiliPlus/pages/setting/widgets/slider_dialog.dart';
 import 'package:PiliPlus/pages/video/reply/widgets/reply_item_grpc.dart';
 import 'package:PiliPlus/plugin/pl_player/controller.dart';
 import 'package:PiliPlus/services/download/download_service.dart';
@@ -84,12 +84,14 @@ List<SettingsModel> get extraSettings => [
       ],
     ),
   ),
-  getPopupMenuModel(
+  PopupModel<SkipType>(
     title: '番剧片头/片尾跳过类型',
     leading: const Icon(MdiIcons.debugStepOver),
-    key: SettingBoxKey.pgcSkipType,
-    values: SkipType.values,
-    defaultIndex: SkipType.skipOnce.index,
+    value: () => Pref.pgcSkipType,
+    items: SkipType.values,
+    onSelected: (value, setState) => GStorage.setting
+        .put(SettingBoxKey.pgcSkipType, value.index)
+        .whenComplete(setState),
   ),
   SwitchModel(
     title: '检查未读动态',
@@ -156,7 +158,7 @@ List<SettingsModel> get extraSettings => [
     leading: const Icon(Icons.photo_outlined),
     setKey: SettingBoxKey.horizontalPreview,
     defaultVal: false,
-    onChanged: (value) => CustomGridView.horizontalPreview = value,
+    onChanged: (value) => ImageGridView.horizontalPreview = value,
   ),
   NormalModel(
     title: '评论折叠行数',
@@ -295,7 +297,7 @@ List<SettingsModel> get extraSettings => [
     title: '超分辨率',
     leading: const Icon(Icons.stay_current_landscape_outlined),
     getSubtitle: () =>
-        '当前:「${Pref.superResolutionType.title}」\n默认设置对番剧生效, 其他视频默认关闭\n超分辨率需要启用硬件解码, 若启用硬件解码后仍然不生效, 尝试切换硬件解码器为 auto-copy',
+        '当前:「${Pref.superResolutionType.label}」\n默认设置对番剧生效, 其他视频默认关闭\n超分辨率需要启用硬件解码, 若启用硬件解码后仍然不生效, 尝试切换硬件解码器为 auto-copy',
     onTap: _showSuperResolutionDialog,
   ),
   const SwitchModel(
@@ -351,6 +353,13 @@ List<SettingsModel> get extraSettings => [
     leading: Icon(Icons.show_chart),
     setKey: SettingBoxKey.showDmChart,
     defaultVal: false,
+  ),
+  const SwitchModel(
+    title: '记录评论',
+    leading: Icon(Icons.message_outlined),
+    setKey: SettingBoxKey.saveReply,
+    defaultVal: true,
+    needReboot: true,
   ),
   const SwitchModel(
     title: '发评反诈',
@@ -466,7 +475,7 @@ List<SettingsModel> get extraSettings => [
     leading: const Icon(Icons.menu),
     setKey: SettingBoxKey.enableImgMenu,
     defaultVal: false,
-    onChanged: (value) => CustomGridView.enableImgMenu = value,
+    onChanged: (value) => ImageGridView.enableImgMenu = value,
   ),
   SwitchModel(
     setKey: SettingBoxKey.feedBackEnable,
@@ -950,7 +959,7 @@ Future<void> _showRefreshDragDialog(
 ) async {
   final res = await showDialog<double>(
     context: context,
-    builder: (context) => SlideDialog(
+    builder: (context) => SliderDialog(
       title: '刷新滑动距离',
       min: 0.1,
       max: 0.5,
@@ -964,7 +973,6 @@ Future<void> _showRefreshDragDialog(
     kDragContainerExtentPercentage = res;
     await GStorage.setting.put(SettingBoxKey.refreshDragPercentage, res);
     Get.forceAppUpdate();
-    setState();
   }
 }
 
@@ -974,7 +982,7 @@ Future<void> _showRefreshDialog(
 ) async {
   final res = await showDialog<double>(
     context: context,
-    builder: (context) => SlideDialog(
+    builder: (context) => SliderDialog(
       title: '刷新指示器高度',
       min: 10.0,
       max: 100.0,
@@ -986,7 +994,6 @@ Future<void> _showRefreshDialog(
     displacement = res;
     await GStorage.setting.put(SettingBoxKey.refreshDisplacement, res);
     Get.forceAppUpdate();
-    setState();
   }
 }
 
@@ -999,7 +1006,7 @@ Future<void> _showSuperResolutionDialog(
     builder: (context) => SelectDialog<SuperResolutionType>(
       title: '超分辨率',
       value: Pref.superResolutionType,
-      values: SuperResolutionType.values.map((e) => (e, e.title)).toList(),
+      values: SuperResolutionType.values.map((e) => (e, e.label)).toList(),
     ),
   );
   if (res != null) {
@@ -1063,7 +1070,7 @@ Future<void> _showReplyCountDialog(
 ) async {
   final res = await showDialog<double>(
     context: context,
-    builder: (context) => SlideDialog(
+    builder: (context) => SliderDialog(
       title: '连接重试次数',
       min: 0,
       max: 8,
@@ -1085,7 +1092,7 @@ Future<void> _showReplyDelayDialog(
 ) async {
   final res = await showDialog<double>(
     context: context,
-    builder: (context) => SlideDialog(
+    builder: (context) => SliderDialog(
       title: '连接重试间隔',
       min: 0,
       max: 1000,
@@ -1111,7 +1118,7 @@ Future<void> _showReplySortDialog(
     builder: (context) => SelectDialog<ReplySortType>(
       title: '评论展示',
       value: Pref.replySortType,
-      values: ReplySortType.values.map((e) => (e, e.title)).toList(),
+      values: ReplySortType.values.take(2).map((e) => (e, e.title)).toList(),
     ),
   );
   if (res != null) {

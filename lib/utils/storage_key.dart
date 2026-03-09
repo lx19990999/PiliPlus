@@ -220,8 +220,7 @@ abstract final class SettingBoxKey {
       enableMYBar = 'enableMYBar',
       hideTopBar = 'hideSearchBar',
       hideBottomBar = 'hideTabBar',
-      scrollThreshold = 'scrollThreshold',
-      enableScrollThreshold = 'enableScrollThreshold',
+      barHideType = 'barHideType',
       tabBarSort = 'tabBarSort',
       dynamicBadgeMode = 'dynamicBadgeMode',
       msgBadgeMode = 'msgBadgeMode',
@@ -229,7 +228,8 @@ abstract final class SettingBoxKey {
       navBarSort = 'navBarSort',
       tempPlayerConf = 'tempPlayerConf',
       reduceLuxColor = 'reduceLuxColor',
-      liveCdnUrl = 'liveCdnUrl';
+      liveCdnUrl = 'liveCdnUrl',
+      saveReply = 'saveReply';
 }
 
 abstract final class LocalCacheKey {

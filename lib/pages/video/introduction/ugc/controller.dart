@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:PiliPlus/common/widgets/button/icon_button.dart';
 import 'package:PiliPlus/common/widgets/scroll_physics.dart';
 import 'package:PiliPlus/http/api.dart';
 import 'package:PiliPlus/http/constants.dart';
@@ -89,6 +90,14 @@ class UgcIntroController extends CommonIntroController with ReloadMixin {
     queryVideoTags();
     final res = await VideoHttp.videoIntro(bvid: bvid);
     if (res case Success(:final response)) {
+      if (response.redirectUrl != null &&
+          videoDetailCtr.epId == null &&
+          videoDetailCtr.seasonId == null) {
+        if (!isClosed) {
+          PageUtils.viewPgcFromUri(response.redirectUrl!, off: true);
+        }
+        return;
+      }
       videoPlayerServiceHandler?.onVideoDetailChange(
         response,
         cid.value,
@@ -299,8 +308,8 @@ class UgcIntroController extends CommonIntroController with ReloadMixin {
   @override
   void actionShareVideo(BuildContext context) {
     final videoDetail = this.videoDetail.value;
-    String videoUrl =
-        '${HttpString.baseUrl}/video/$bvid${videoDetailCtr.playedTimePos}';
+    final playedTimePos = videoDetailCtr.playedTimePos;
+    String videoUrl = '${HttpString.baseUrl}/video/$bvid';
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -319,6 +328,16 @@ class UgcIntroController extends CommonIntroController with ReloadMixin {
                 Get.back();
                 Utils.copyText(videoUrl);
               },
+              trailing: playedTimePos.isNotEmpty
+                  ? iconButton(
+                      tooltip: '精确分享',
+                      icon: const Icon(Icons.timer_outlined),
+                      onPressed: () {
+                        Get.back();
+                        Utils.copyText('$videoUrl$playedTimePos');
+                      },
+                    )
+                  : null,
             ),
             ListTile(
               dense: true,

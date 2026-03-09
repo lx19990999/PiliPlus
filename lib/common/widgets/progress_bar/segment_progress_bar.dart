@@ -17,7 +17,9 @@
 
 import 'dart:ui' as ui;
 
-import 'package:flutter/foundation.dart' show listEquals, kDebugMode;
+import 'package:PiliPlus/utils/extension/iterable_ext.dart';
+import 'package:collection/collection.dart';
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/gestures.dart' show TapGestureRecognizer;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show BoxHitTestEntry;
@@ -121,17 +123,17 @@ class RenderProgressBar extends BaseRenderProgressBar<Segment> {
 
     for (final segment in segments) {
       paint.color = segment.color;
-      final segmentStart = segment.start * size.width;
-      final segmentEnd = segment.end * size.width;
+      final segmentStart = offset.dx + segment.start * size.width;
+      final segmentEnd = offset.dx + segment.end * size.width;
 
       if (segmentEnd > segmentStart ||
           (segmentEnd == segmentStart && segmentStart > 0)) {
         canvas.drawRect(
           Rect.fromLTRB(
             segmentStart,
-            0,
+            offset.dy,
             segmentEnd == segmentStart ? segmentStart + 2 : segmentEnd,
-            size.height,
+            size.height + offset.dy,
           ),
           paint,
         );
@@ -223,6 +225,14 @@ class RenderViewPointProgressBar
     final canvas = context.canvas;
     final paint = Paint()..style = PaintingStyle.fill;
 
+    if (offset != .zero) {
+      canvas
+        ..save()
+        ..translate(offset.dx, offset.dy);
+    }
+
+    assert(segments.isSortedBy((i) => i.end));
+
     canvas.drawRect(
       Rect.fromLTRB(0, 0, size.width, _barHeight),
       paint..color = Colors.grey[600]!.withValues(alpha: 0.45),
@@ -272,6 +282,7 @@ class RenderViewPointProgressBar
       }
       prevEnd = segmentEnd + _dividerWidth;
     }
+    if (offset != .zero) canvas.restore();
   }
 
   ValueSetter<Duration>? _onSeek;
@@ -305,19 +316,16 @@ class RenderViewPointProgressBar
     }
   }
 
+  @pragma('vm:notify-debugger-on-exception')
   void _onTapUp(TapUpDetails details) {
     try {
       final seg = details.localPosition.dx / size.width;
-      final item = _segments
-          .where((item) => item.end >= seg)
-          .reduce((a, b) => a.end < b.end ? a : b);
+      final item = _segments[_segments.lowerBoundByKey((i) => i.end, seg)];
       if (item.from case final from?) {
         _onSeek?.call(Duration(seconds: from));
       }
       // if (kDebugMode) debugPrint('${item.title},,${item.from}');
-    } catch (e) {
-      if (kDebugMode) rethrow;
-    }
+    } catch (_) {}
   }
 }
 
@@ -370,7 +378,4 @@ class BaseRenderProgressBar<T extends BaseSegment> extends RenderBox {
   void performLayout() {
     size = constraints.constrainDimensions(constraints.maxWidth, height);
   }
-
-  @override
-  bool get isRepaintBoundary => true;
 }

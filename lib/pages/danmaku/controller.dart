@@ -5,6 +5,7 @@ import 'package:PiliPlus/grpc/bilibili/community/service/dm/v1.pb.dart';
 import 'package:PiliPlus/grpc/dm.dart';
 import 'package:PiliPlus/http/loading_state.dart';
 import 'package:PiliPlus/plugin/pl_player/controller.dart';
+import 'package:PiliPlus/plugin/pl_player/models/data_source.dart';
 import 'package:PiliPlus/plugin/pl_player/utils/danmaku_options.dart';
 import 'package:PiliPlus/utils/accounts.dart';
 import 'package:PiliPlus/utils/path_utils.dart';
@@ -25,9 +26,9 @@ class PlDanmakuController {
 
   late final _isLogin = Accounts.main.isLogin;
 
-  final Map<int, List<DanmakuElem>> _dmSegMap = {};
+  final Map<int, List<DanmakuElem>> _dmSegMap = HashMap();
   // 已请求的段落标记
-  late final Set<int> _requestedSeg = {};
+  late final Set<int> _requestedSeg = HashSet();
 
   static const int segmentLength = 60 * 6 * 1000;
 
@@ -121,7 +122,10 @@ class PlDanmakuController {
   Future<void> _initFileDm() async {
     try {
       final file = File(
-        path.join(_plPlayerController.dirPath!, PathUtils.danmakuName),
+        path.join(
+          (_plPlayerController.dataSource as FileSource).dir,
+          PathUtils.danmakuName,
+        ),
       );
       if (!file.existsSync()) return;
       final bytes = await file.readAsBytes();

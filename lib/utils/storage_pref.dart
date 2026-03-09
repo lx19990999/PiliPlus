@@ -3,6 +3,7 @@ import 'dart:math' show pow, sqrt;
 
 import 'package:PiliPlus/common/widgets/pair.dart';
 import 'package:PiliPlus/http/constants.dart';
+import 'package:PiliPlus/models/common/bar_hide_type.dart';
 import 'package:PiliPlus/models/common/dynamic/dynamic_badge_mode.dart';
 import 'package:PiliPlus/models/common/dynamic/dynamics_type.dart';
 import 'package:PiliPlus/models/common/dynamic/up_panel_position.dart';
@@ -39,6 +40,7 @@ import 'package:PiliPlus/utils/storage_key.dart';
 import 'package:PiliPlus/utils/utils.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flex_seed_scheme/flex_seed_scheme.dart' show FlexSchemeVariant;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hive/hive.dart';
@@ -324,7 +326,7 @@ abstract final class Pref {
   );
 
   static bool get blockTrack =>
-      _setting.get(SettingBoxKey.blockTrack, defaultValue: true);
+      _setting.get(SettingBoxKey.blockTrack, defaultValue: !kDebugMode);
 
   static bool get checkDynamic =>
       _setting.get(SettingBoxKey.checkDynamic, defaultValue: true);
@@ -461,7 +463,7 @@ abstract final class Pref {
     SuperResolutionType? superResolutionType;
     final index = _setting.get(SettingBoxKey.superResolutionType);
     if (index != null) {
-      superResolutionType = SuperResolutionType.values.getOrNull(index);
+      superResolutionType = SuperResolutionType.values.elementAtOrNull(index);
     }
     return superResolutionType ?? SuperResolutionType.disable;
   }
@@ -671,11 +673,11 @@ abstract final class Pref {
     defaultValue: PlatformUtils.isMobile,
   );
 
-  static bool get enableScrollThreshold =>
-      _setting.get(SettingBoxKey.enableScrollThreshold, defaultValue: false);
-
-  static double get scrollThreshold =>
-      _setting.get(SettingBoxKey.scrollThreshold, defaultValue: 50.0);
+  static BarHideType get barHideType =>
+      BarHideType.values[_setting.get(
+        SettingBoxKey.barHideType,
+        defaultValue: BarHideType.sync.index,
+      )];
 
   static bool get enableSearchWord =>
       _setting.get(SettingBoxKey.enableSearchWord, defaultValue: false);
@@ -803,7 +805,7 @@ abstract final class Pref {
   static bool get enableOnlineTotal =>
       _setting.get(SettingBoxKey.enableOnlineTotal, defaultValue: false);
 
-  static bool get enableAutoEnter =>
+  static bool get autoEnterFullScreen =>
       _setting.get(SettingBoxKey.enableAutoEnter, defaultValue: false);
 
   static bool get enableAutoLongPressSpeed =>
@@ -958,4 +960,7 @@ abstract final class Pref {
 
   static double get touchSlopH =>
       _setting.get(SettingBoxKey.touchSlopH, defaultValue: 24.0);
+
+  static bool get saveReply =>
+      _setting.get(SettingBoxKey.saveReply, defaultValue: true);
 }
