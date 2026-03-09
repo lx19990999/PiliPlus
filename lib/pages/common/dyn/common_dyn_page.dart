@@ -1,7 +1,7 @@
 import 'dart:math' show pi;
 
 import 'package:PiliPlus/common/skeleton/video_reply.dart';
-import 'package:PiliPlus/common/widgets/custom_sliver_persistent_header_delegate.dart';
+import 'package:PiliPlus/common/widgets/sliver/sliver_floating_header.dart';
 import 'package:PiliPlus/common/widgets/loading_widget/http_error.dart';
 import 'package:PiliPlus/common/widgets/view_safe_area.dart';
 import 'package:PiliPlus/grpc/bilibili/main/community/reply/v1.pb.dart'
@@ -103,14 +103,12 @@ abstract class CommonDynPageState<T extends StatefulWidget> extends State<T>
 
   Widget buildReplyHeader(ThemeData theme) {
     final secondary = theme.colorScheme.secondary;
-    return SliverPersistentHeader(
-      pinned: true,
-      delegate: CustomSliverPersistentHeaderDelegate(
-        extent: 45,
-        bgColor: theme.colorScheme.surface,
-        child: Container(
+    return SliverFloatingHeaderWidget(
+      backgroundColor: theme.colorScheme.surface,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 2.5, 6, 2.5),
+        child: SizedBox(
           height: 45,
-          padding: const EdgeInsets.only(left: 12, right: 6),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [

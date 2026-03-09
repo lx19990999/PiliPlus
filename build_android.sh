@@ -1,7 +1,11 @@
-﻿#!/bin/bash
+#!/bin/bash
 # Android 构建脚本 - 带实时日志输出（Linux 版本）
 
 set -e  # 遇到错误立即退出
+
+# 切换到脚本所在目录（项目根目录），确保 pub get / build 在同一目录执行
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
 
 logFile="build_android.log"
 startTime=$(date +%s)
@@ -373,6 +377,16 @@ write_build_log ""
 write_build_log "[6/6] 构建 Android 客户端..." "$YELLOW"
 write_build_log "开始时间: $(date +%H:%M:%S)" "$GRAY"
 androidStart=$(date +%s)
+
+# 确保 .dart_tool/package_config.json 存在（Gradle 依赖此文件，clean 会删掉 .dart_tool）
+if [ ! -f ".dart_tool/package_config.json" ]; then
+    write_build_log "缺少 .dart_tool/package_config.json，正在执行 flutter pub get..." "$YELLOW"
+    if ! flutter pub get 2>&1 | tee -a "$logFile"; then
+        write_build_log "flutter pub get 失败，无法继续构建" "$RED"
+        exit 1
+    fi
+    write_build_log "依赖已重新获取" "$GREEN"
+fi
 
 # 构建并实时显示输出，同时保存到日志
 # 使用 --no-pub 避免重复解析依赖（已在第4步完成）

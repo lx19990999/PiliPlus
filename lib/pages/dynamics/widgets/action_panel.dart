@@ -1,10 +1,9 @@
-import 'package:PiliPlus/common/widgets/flutter/dyn/text_button.dart';
 import 'package:PiliPlus/models/dynamics/result.dart';
 import 'package:PiliPlus/pages/dynamics_repost/view.dart';
 import 'package:PiliPlus/utils/num_utils.dart';
 import 'package:PiliPlus/utils/page_utils.dart';
 import 'package:PiliPlus/utils/request_utils.dart';
-import 'package:flutter/material.dart' hide TextButton;
+import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class ActionPanel extends StatelessWidget {
@@ -24,7 +23,7 @@ class ActionPanel extends StatelessWidget {
     final comment = moduleStat.comment!;
     final like = moduleStat.like!;
     final btnStyle = TextButton.styleFrom(
-      tapTargetSize: .padded,
+      tapTargetSize: MaterialTapTargetSize.padded,
       padding: const EdgeInsets.symmetric(horizontal: 15),
       foregroundColor: outline,
     );
@@ -72,11 +71,15 @@ class ActionPanel extends StatelessWidget {
             ),
           ),
         TextButton.icon(
-            onPressed: () => RequestUtils.onLikeDynamic(item, () {
-              if (context.mounted) {
-                (context as Element?)?.markNeedsBuild();
-              }
-            }),
+            onPressed: () => RequestUtils.onLikeDynamic(
+              item,
+              like.status!,
+              () {
+                if (context.mounted) {
+                  (context as Element?)?.markNeedsBuild();
+                }
+              },
+            ),
             icon: Icon(
               like.status!
                   ? FontAwesomeIcons.solidThumbsUp

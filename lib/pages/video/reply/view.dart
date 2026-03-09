@@ -1,5 +1,5 @@
 import 'package:PiliPlus/common/skeleton/video_reply.dart';
-import 'package:PiliPlus/common/widgets/custom_sliver_persistent_header_delegate.dart';
+import 'package:PiliPlus/common/widgets/sliver/sliver_floating_header.dart';
 import 'package:PiliPlus/common/widgets/flutter/refresh_indicator.dart';
 import 'package:PiliPlus/common/widgets/loading_widget/http_error.dart';
 import 'package:PiliPlus/grpc/bilibili/main/community/reply/v1.pb.dart'
@@ -87,15 +87,12 @@ class _VideoReplyPanelState extends State<VideoReplyPanel>
                   : const AlwaysScrollableScrollPhysics(),
               key: const PageStorageKey(_VideoReplyPanelState),
               slivers: <Widget>[
-                SliverPersistentHeader(
-                  pinned: false,
-                  floating: true,
-                  delegate: CustomSliverPersistentHeaderDelegate(
-                    extent: 40,
-                    bgColor: theme.colorScheme.surface,
-                    child: Container(
+                SliverFloatingHeaderWidget(
+                  backgroundColor: theme.colorScheme.surface,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 2.5, 6, 2.5),
+                    child: SizedBox(
                       height: 40,
-                      padding: const EdgeInsets.fromLTRB(12, 0, 6, 0),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
