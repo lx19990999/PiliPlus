@@ -27,6 +27,8 @@ abstract final class ImageUtils {
       DateFormat('yyyy-MM-dd_HH-mm-ss').format(DateTime.now());
   static bool silentDownImg = Pref.silentDownImg;
   static const _androidRelativePath = 'Pictures/${Constants.appName}';
+  /// Android 视频保存相对路径（外部存储下 Movies/PiliPlus/）
+  static const androidVideoRelativePath = 'Movies/${Constants.appName}';
 
   // 图片分享
   static Future<void> onShareImg(String url) async {
@@ -365,6 +367,55 @@ abstract final class ImageUtils {
         SmartDialog.showToast(' 已保存 ');
       } else {
         SmartDialog.showToast('保存失败，${res.errorMessage}');
+      }
+    }
+  }
+
+  /// 保存视频文件：Android → Movies/PiliPlus/，iOS → 系统相册，桌面 → 用户选择目录
+  static Future<void> saveFileVideo({
+    required String filePath,
+    required String fileName,
+    bool needToast = true,
+    bool del = false,
+  }) async {
+    final file = File(filePath);
+    if (!file.existsSync()) {
+      SmartDialog.showToast("文件不存在");
+      return;
+    }
+    SaveResult? res;
+    if (PlatformUtils.isMobile) {
+      if (!await checkPermissionDependOnSdkInt()) {
+        return;
+      }
+      res = await SaverGallery.saveFile(
+        filePath: filePath,
+        fileName: fileName,
+        androidRelativePath: androidVideoRelativePath,
+        skipIfExists: false,
+      );
+      if (del) file.tryDel();
+    } else {
+      final savePath = await FilePicker.platform.saveFile(
+        type: FileType.custom,
+        allowedExtensions: ['mp4', 'm4v', 'mov', 'mkv', 'webm', 'm4s'],
+        fileName: fileName,
+      );
+      if (savePath == null) {
+        SmartDialog.showToast("取消保存");
+        return;
+      }
+      await file.copy(savePath);
+      if (del) file.tryDel();
+      res = SaveResult(true, null);
+    }
+    if (needToast) {
+      if (res != null && res.isSuccess) {
+        SmartDialog.showToast(' 已保存 ');
+      } else {
+        SmartDialog.showToast(
+          res != null ? '保存失败，${res.errorMessage}' : '保存失败',
+        );
       }
     }
   }
