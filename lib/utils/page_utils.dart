@@ -37,9 +37,6 @@ import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 abstract final class PageUtils {
-  static final RouteObserver<PageRoute> routeObserver =
-      RouteObserver<PageRoute>();
-
   static RelativeRect menuPosition(Offset offset) {
     return .fromLTRB(offset.dx, offset.dy, offset.dx, 0);
   }
@@ -48,6 +45,8 @@ abstract final class PageUtils {
     int initialPage = 0,
     required List<SourceModel> imgList,
     int? quality,
+    ValueChanged<int>? onPageChanged,
+    String tag = '',
   }) {
     return Get.key.currentState!.push<void>(
       HeroDialogRoute(
@@ -55,6 +54,8 @@ abstract final class PageUtils {
           sources: imgList,
           initIndex: initialPage,
           quality: quality ?? GlobalData().imgQuality,
+          onPageChanged: onPageChanged,
+          tag: tag,
         ),
       ),
     );
@@ -219,6 +220,10 @@ abstract final class PageUtils {
           },
         );
       } else {
+        if (item.linkFolded) {
+          pushDynFromId(id: item.idStr);
+          return;
+        }
         toDupNamed(
           '/dynamicDetail',
           arguments: {
@@ -532,7 +537,7 @@ abstract final class PageUtils {
     if (off) {
       Get.offNamed('/liveRoom', arguments: roomId);
     } else {
-      Get.toNamed('/liveRoom', arguments: roomId);
+      PageUtils.toDupNamed('/liveRoom', arguments: roomId);
     }
   }
 

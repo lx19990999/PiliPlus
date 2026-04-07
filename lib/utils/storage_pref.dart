@@ -43,7 +43,7 @@ import 'package:flex_seed_scheme/flex_seed_scheme.dart' show FlexSchemeVariant;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:hive/hive.dart';
+import 'package:hive_ce/hive.dart';
 
 abstract final class Pref {
   static final Box _setting = GStorage.setting;
@@ -477,8 +477,11 @@ abstract final class Pref {
   static bool get searchSuggestion =>
       _setting.get(SettingBoxKey.searchSuggestion, defaultValue: true);
 
-  static bool get showDynDecorate =>
-      _setting.get(SettingBoxKey.showDynDecorate, defaultValue: true);
+  static bool get showDecorate =>
+      _setting.get(SettingBoxKey.showDecorate, defaultValue: true);
+
+  static bool get showMedal =>
+      _setting.get(SettingBoxKey.showMedal, defaultValue: true);
 
   static bool get enableLivePhoto =>
       _setting.get(SettingBoxKey.enableLivePhoto, defaultValue: true);
@@ -963,4 +966,7 @@ abstract final class Pref {
 
   static bool get saveReply =>
       _setting.get(SettingBoxKey.saveReply, defaultValue: true);
+
+  static bool get floatingNavBar =>
+      _setting.get(SettingBoxKey.floatingNavBar, defaultValue: false);
 }

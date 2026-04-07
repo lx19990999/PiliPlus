@@ -14,6 +14,7 @@ import 'package:PiliPlus/utils/extension/widget_ext.dart';
 import 'package:PiliPlus/utils/num_utils.dart';
 import 'package:PiliPlus/utils/utils.dart';
 import 'package:extended_nested_scroll_view/extended_nested_scroll_view.dart';
+import 'package:fixnum/fixnum.dart' show Int64;
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
@@ -31,6 +32,7 @@ class VideoReplyReplyPanel extends CommonSlidePage {
     required this.isVideoDetail,
     required this.replyType,
     this.isNested = false,
+    this.upMid,
   });
   final int? id;
   final int oid;
@@ -40,6 +42,7 @@ class VideoReplyReplyPanel extends CommonSlidePage {
   final bool isVideoDetail;
   final int replyType;
   final bool isNested;
+  final Int64? upMid;
 
   @override
   State<VideoReplyReplyPanel> createState() => _VideoReplyReplyPanelState();
@@ -225,7 +228,7 @@ class _VideoReplyReplyPanelState extends State<VideoReplyReplyPanel>
             replyLevel: 2,
             needDivider: false,
             onReply: (replyItem) => _controller.onReply(replyItem, index: -1),
-            upMid: _controller.upMid,
+            upMid: widget.upMid ?? _controller.upMid,
             onCheckReply: (item) =>
                 _controller.onCheckReply(item, isManual: true),
           ),

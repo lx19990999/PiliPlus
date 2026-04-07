@@ -313,7 +313,7 @@ abstract final class ImageUtils {
       }
     } else {
       SmartDialog.dismiss();
-      final savePath = await FilePicker.platform.saveFile(
+      final savePath = await FilePicker.saveFile(
         type: FileType.image,
         fileName: fileName,
       );
@@ -350,7 +350,7 @@ abstract final class ImageUtils {
       );
       if (del) file.tryDel();
     } else {
-      final savePath = await FilePicker.platform.saveFile(
+      final savePath = await FilePicker.saveFile(
         type: type,
         fileName: fileName,
       );

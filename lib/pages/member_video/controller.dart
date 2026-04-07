@@ -28,17 +28,18 @@ class MemberVideoCtr
     required this.seriesId,
     this.username,
     this.title,
-  });
+  }) : isVideo = type == .video;
 
-  ContributeType type;
+  final ContributeType type;
+  final bool isVideo;
   int? seasonId;
   int? seriesId;
   final int mid;
-  late RxString order = 'pubdate'.obs;
-  late RxString sort = 'desc'.obs;
-  RxInt count = (-1).obs;
+  late ArchiveOrderTypeApp order = .pubdate;
+  late ArchiveSortTypeApp sort = .desc;
+  int? count;
   int? next;
-  Rx<EpisodicButton> episodicButton = EpisodicButton().obs;
+  EpisodicButton? episodicButton;
   final String? username;
   final String? title;
 
@@ -70,7 +71,7 @@ class MemberVideoCtr
   @override
   void onInit() {
     super.onInit();
-    if (type == ContributeType.video) {
+    if (isVideo) {
       fromViewAid = Get.parameters['from_view_aid'];
     }
     page = 0;
@@ -83,24 +84,18 @@ class MemberVideoCtr
     Success<SpaceArchiveData> response,
   ) {
     final data = response.response;
-    episodicButton
-      ..value = data.episodicButton ?? EpisodicButton()
-      ..refresh();
+    episodicButton = data.episodicButton;
     next = data.next;
     if (page == 0 || isLoadPrevious) {
       hasPrev = data.hasPrev;
     }
     if (page == 0 || !isLoadPrevious) {
-      if ((type == ContributeType.video
-              ? data.hasNext == false
-              : data.next == 0) ||
+      if ((isVideo ? data.hasNext == false : data.next == 0) ||
           data.item.isNullOrEmpty) {
         isEnd = true;
       }
     }
-    count.value = type == ContributeType.season
-        ? (data.item?.length ?? -1)
-        : (data.count ?? -1);
+    count = type == .season ? data.item?.length : data.count;
     if (page != 0) {
       if (loadingState.value case Success(:final response)) {
         data.item ??= <SpaceArchiveItem>[];
@@ -123,18 +118,18 @@ class MemberVideoCtr
       MemberHttp.spaceArchive(
         type: type,
         mid: mid,
-        aid: type == ContributeType.video
+        aid: isVideo
             ? isLoadPrevious
                   ? firstAid
                   : lastAid
             : null,
-        order: type == ContributeType.video ? order.value : null,
-        sort: type == ContributeType.video
+        order: isVideo ? order : null,
+        sort: isVideo
             ? isLoadPrevious
-                  ? 'asc'
+                  ? .asc
                   : null
-            : sort.value,
-        pn: type == ContributeType.charging ? page : null,
+            : sort,
+        pn: type == .charging ? page : null,
         next: next,
         seasonId: seasonId,
         seriesId: seriesId,
@@ -143,17 +138,17 @@ class MemberVideoCtr
 
   void queryBySort() {
     if (isLoading) return;
-    if (type == ContributeType.video) {
+    if (isVideo) {
       isLocating.value = false;
-      order.value = order.value == 'pubdate' ? 'click' : 'pubdate';
+      order = order == .pubdate ? .click : .pubdate;
     } else {
-      sort.value = sort.value == 'desc' ? 'asc' : 'desc';
+      sort = sort == .desc ? .asc : .desc;
     }
     onReload();
   }
 
   Future<void> toViewPlayAll() async {
-    final episodicButton = this.episodicButton.value;
+    final episodicButton = this.episodicButton!;
     if (episodicButton.text == '继续播放' &&
         episodicButton.uri?.isNotEmpty == true) {
       final params = Uri.parse(episodicButton.uri!).queryParameters;
@@ -172,7 +167,7 @@ class MemberVideoCtr
               'oid': oid,
               'favTitle':
                   '$username: ${title ?? episodicButton.text ?? '播放全部'}',
-              if (seriesId == null) 'count': count.value,
+              if (seriesId == null) 'count': ?count,
               if (seasonId != null || seriesId != null)
                 'mediaType': params['page_type'],
               'desc': params['desc'] == '1',
@@ -195,9 +190,7 @@ class MemberVideoCtr
           bool desc = seasonId != null ? false : true;
           desc =
               (seasonId != null || seriesId != null) &&
-                  (type == ContributeType.video
-                      ? order.value == 'click'
-                      : sort.value == 'asc')
+                  (isVideo ? order == .click : sort == .asc)
               ? !desc
               : desc;
           PageUtils.toVideoPage(
@@ -211,14 +204,13 @@ class MemberVideoCtr
               'oid': IdUtils.bv2av(element.bvid!),
               'favTitle':
                   '$username: ${title ?? episodicButton.text ?? '播放全部'}',
-              if (seriesId == null) 'count': count.value,
+              if (seriesId == null) 'count': ?count,
               if (seasonId != null || seriesId != null)
                 'mediaType': Uri.parse(
                   episodicButton.uri!,
                 ).queryParameters['page_type'],
               'desc': desc,
-              if (type == ContributeType.video)
-                'sortField': order.value == 'click' ? 2 : 1,
+              if (isVideo) 'sortField': order == .click ? 2 : 1,
             },
           );
           break;

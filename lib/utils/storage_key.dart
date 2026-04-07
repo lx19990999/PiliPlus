@@ -100,7 +100,8 @@ abstract final class SettingBoxKey {
       preInitPlayer = 'preInitPlayer',
       mainTabBarView = 'mainTabBarView',
       searchSuggestion = 'searchSuggestion',
-      showDynDecorate = 'showDynDecorate',
+      showDecorate = 'showDynDecorate',
+      showMedal = 'showMedal',
       enableLivePhoto = 'enableLivePhoto',
       showSeekPreview = 'showSeekPreview',
       showDmChart = 'showDmChart',
@@ -148,7 +149,8 @@ abstract final class SettingBoxKey {
       followOrderType = 'followOrderType',
       enableImgMenu = 'enableImgMenu',
       showDynDispute = 'showDynDispute',
-      touchSlopH = 'touchSlopH';
+      touchSlopH = 'touchSlopH',
+      floatingNavBar = 'floatingNavBar';
 
   static const String minimizeOnExit = 'minimizeOnExit',
       windowSize = 'windowSize',
