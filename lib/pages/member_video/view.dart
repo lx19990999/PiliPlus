@@ -110,7 +110,8 @@ class _MemberVideoState extends State<MemberVideo>
         ],
       ),
     );
-    if (_controller.isVideo && _controller.fromViewAid?.isNotEmpty == true) {
+    if (widget.type == ContributeType.video &&
+        _controller.fromViewAid?.isNotEmpty == true) {
       if (_index == null) {
         _scrollController =
             PrimaryScrollController.of(this.context)
@@ -288,7 +289,7 @@ class _MemberVideoState extends State<MemberVideo>
                   SliverGrid.builder(
                     gridDelegate: gridDelegate,
                     itemBuilder: (context, index) {
-                      if (widget.type != .season &&
+                      if (widget.type != ContributeType.season &&
                           index == response.length - 1) {
                         _controller.onLoadMore();
                       }
@@ -307,80 +308,5 @@ class _MemberVideoState extends State<MemberVideo>
         onReload: _controller.onReload,
       ),
     };
-  }
-
-  Widget _buildHeader(ThemeData theme) {
-    return SliverFloatingHeaderWidget(
-      backgroundColor: theme.colorScheme.surface,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 2.5, 8, 2.5),
-        child: Row(
-          children: [
-            ?_buildCount(),
-            ?_buildEpisodeBtn(theme),
-            const Spacer(),
-            _buildSortBtn(theme),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget? _buildCount() {
-    final count = _controller.count;
-    if (count != null) {
-      return Text(
-        '共$count视频',
-        style: const TextStyle(fontSize: 13),
-      );
-    }
-    return null;
-  }
-
-  Widget? _buildEpisodeBtn(ThemeData theme) {
-    final episodicButton = _controller.episodicButton;
-    if (episodicButton?.uri?.isNotEmpty ?? false) {
-      return Padding(
-        padding: EdgeInsets.only(
-          left: _controller.count != null ? 6 : 0,
-        ),
-        child: TextButton.icon(
-          style: Style.buttonStyle,
-          onPressed: _controller.toViewPlayAll,
-          icon: Icon(
-            Icons.play_circle_outline_rounded,
-            size: 16,
-            color: theme.colorScheme.secondary,
-          ),
-          label: Text(
-            episodicButton?.text ?? '播放全部',
-            style: TextStyle(
-              fontSize: 13,
-              color: theme.colorScheme.secondary,
-            ),
-          ),
-        ),
-      );
-    }
-    return null;
-  }
-
-  Widget _buildSortBtn(ThemeData theme) {
-    return TextButton.icon(
-      style: Style.buttonStyle,
-      onPressed: _controller.queryBySort,
-      icon: Icon(
-        Icons.sort,
-        size: 16,
-        color: theme.colorScheme.secondary,
-      ),
-      label: Text(
-        _controller.isVideo ? _controller.order.label : _controller.sort.label,
-        style: TextStyle(
-          fontSize: 13,
-          color: theme.colorScheme.secondary,
-        ),
-      ),
-    );
   }
 }

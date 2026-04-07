@@ -64,9 +64,9 @@ class _MainReplyPageState extends State<MainReplyPage>
         onNotification: (notification) {
           final direction = notification.direction;
           if (direction == ScrollDirection.forward) {
-            _controller.showFab();
+            showFab();
           } else if (direction == ScrollDirection.reverse) {
-            _controller.hideFab();
+            hideFab();
           }
           return false;
         },
@@ -92,23 +92,20 @@ class _MainReplyPageState extends State<MainReplyPage>
       floatingActionButtonLocation: const NoBottomPaddingFabLocation(),
       floatingActionButton: SlideTransition(
         position: fabAnimation,
-        child: Padding(
-          padding: .only(bottom: padding.bottom + kFloatingActionButtonMargin),
-          child: FloatingActionButton(
-            heroTag: null,
-            onPressed: () {
-              try {
-                feedBack();
-                _controller.onReply(
-                  null,
-                  oid: _controller.oid,
-                  replyType: _controller.replyType,
-                );
-              } catch (_) {}
-            },
-            tooltip: '评论',
-            child: const Icon(Icons.reply),
-          ),
+        child: FloatingActionButton(
+          heroTag: null,
+          onPressed: () {
+            try {
+              feedBack();
+              _controller.onReply(
+                null,
+                oid: _controller.oid,
+                replyType: _controller.replyType,
+              );
+            } catch (_) {}
+          },
+          tooltip: '评论',
+          child: const Icon(Icons.reply),
         ),
       ),
     );
@@ -276,7 +273,6 @@ class _MainReplyPageState extends State<MainReplyPage>
               isVideoDetail: false,
               replyType: _controller.replyType,
               firstFloor: replyItem,
-              upMid: _controller.upMid,
             ),
           ).constraintWidth(),
         ),

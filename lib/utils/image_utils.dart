@@ -396,7 +396,7 @@ abstract final class ImageUtils {
       );
       if (del) file.tryDel();
     } else {
-      final savePath = await FilePicker.platform.saveFile(
+      final savePath = await FilePicker.saveFile(
         type: FileType.custom,
         allowedExtensions: ['mp4', 'm4v', 'mov', 'mkv', 'webm', 'm4s'],
         fileName: fileName,
@@ -410,12 +410,10 @@ abstract final class ImageUtils {
       res = SaveResult(true, null);
     }
     if (needToast) {
-      if (res != null && res.isSuccess) {
+      if (res.isSuccess) {
         SmartDialog.showToast(' 已保存 ');
       } else {
-        SmartDialog.showToast(
-          res != null ? '保存失败，${res.errorMessage}' : '保存失败',
-        );
+        SmartDialog.showToast('保存失败，${res.errorMessage}');
       }
     }
   }

@@ -3,6 +3,8 @@ import 'package:PiliPlus/http/loading_state.dart';
 import 'package:PiliPlus/http/member.dart';
 import 'package:PiliPlus/http/search.dart';
 import 'package:PiliPlus/http/video.dart';
+import 'package:PiliPlus/models/common/member/archive_order_type_app.dart';
+import 'package:PiliPlus/models/common/member/archive_sort_type_app.dart';
 import 'package:PiliPlus/models/common/member/contribute_type.dart';
 import 'package:PiliPlus/models/common/video/source_type.dart';
 import 'package:PiliPlus/models/common/video/video_quality.dart';
@@ -28,18 +30,17 @@ class MemberVideoCtr
     required this.seriesId,
     this.username,
     this.title,
-  }) : isVideo = type == .video;
+  });
 
-  final ContributeType type;
-  final bool isVideo;
+  ContributeType type;
   int? seasonId;
   int? seriesId;
   final int mid;
-  late ArchiveOrderTypeApp order = .pubdate;
-  late ArchiveSortTypeApp sort = .desc;
-  int? count;
+  late RxString order = 'pubdate'.obs;
+  late RxString sort = 'desc'.obs;
+  RxInt count = (-1).obs;
   int? next;
-  EpisodicButton? episodicButton;
+  Rx<EpisodicButton> episodicButton = EpisodicButton().obs;
   final String? username;
   final String? title;
 
@@ -71,7 +72,7 @@ class MemberVideoCtr
   @override
   void onInit() {
     super.onInit();
-    if (isVideo) {
+    if (type == ContributeType.video) {
       fromViewAid = Get.parameters['from_view_aid'];
     }
     page = 0;
@@ -84,18 +85,24 @@ class MemberVideoCtr
     Success<SpaceArchiveData> response,
   ) {
     final data = response.response;
-    episodicButton = data.episodicButton;
+    episodicButton
+      ..value = data.episodicButton ?? EpisodicButton()
+      ..refresh();
     next = data.next;
     if (page == 0 || isLoadPrevious) {
       hasPrev = data.hasPrev;
     }
     if (page == 0 || !isLoadPrevious) {
-      if ((isVideo ? data.hasNext == false : data.next == 0) ||
+      if ((type == ContributeType.video
+              ? data.hasNext == false
+              : data.next == 0) ||
           data.item.isNullOrEmpty) {
         isEnd = true;
       }
     }
-    count = type == .season ? data.item?.length : data.count;
+    count.value = type == ContributeType.season
+        ? (data.item?.length ?? -1)
+        : (data.count ?? -1);
     if (page != 0) {
       if (loadingState.value case Success(:final response)) {
         data.item ??= <SpaceArchiveItem>[];
@@ -118,18 +125,26 @@ class MemberVideoCtr
       MemberHttp.spaceArchive(
         type: type,
         mid: mid,
-        aid: isVideo
+        aid: type == ContributeType.video
             ? isLoadPrevious
                   ? firstAid
                   : lastAid
             : null,
-        order: isVideo ? order : null,
-        sort: isVideo
+        order: type == ContributeType.video
+            ? switch (order.value) {
+                'click' => ArchiveOrderTypeApp.click,
+                _ => ArchiveOrderTypeApp.pubdate,
+              }
+            : null,
+        sort: type == ContributeType.video
             ? isLoadPrevious
-                  ? .asc
+                  ? ArchiveSortTypeApp.asc
                   : null
-            : sort,
-        pn: type == .charging ? page : null,
+            : switch (sort.value) {
+                'asc' => ArchiveSortTypeApp.asc,
+                _ => ArchiveSortTypeApp.desc,
+              },
+        pn: type == ContributeType.charging ? page : null,
         next: next,
         seasonId: seasonId,
         seriesId: seriesId,
@@ -138,17 +153,17 @@ class MemberVideoCtr
 
   void queryBySort() {
     if (isLoading) return;
-    if (isVideo) {
+    if (type == ContributeType.video) {
       isLocating.value = false;
-      order = order == .pubdate ? .click : .pubdate;
+      order.value = order.value == 'pubdate' ? 'click' : 'pubdate';
     } else {
-      sort = sort == .desc ? .asc : .desc;
+      sort.value = sort.value == 'desc' ? 'asc' : 'desc';
     }
     onReload();
   }
 
   Future<void> toViewPlayAll() async {
-    final episodicButton = this.episodicButton!;
+    final episodicButton = this.episodicButton.value;
     if (episodicButton.text == '继续播放' &&
         episodicButton.uri?.isNotEmpty == true) {
       final params = Uri.parse(episodicButton.uri!).queryParameters;
@@ -167,7 +182,7 @@ class MemberVideoCtr
               'oid': oid,
               'favTitle':
                   '$username: ${title ?? episodicButton.text ?? '播放全部'}',
-              if (seriesId == null) 'count': ?count,
+              if (seriesId == null) 'count': count.value,
               if (seasonId != null || seriesId != null)
                 'mediaType': params['page_type'],
               'desc': params['desc'] == '1',
@@ -190,7 +205,9 @@ class MemberVideoCtr
           bool desc = seasonId != null ? false : true;
           desc =
               (seasonId != null || seriesId != null) &&
-                  (isVideo ? order == .click : sort == .asc)
+                  (type == ContributeType.video
+                      ? order.value == 'click'
+                      : sort.value == 'asc')
               ? !desc
               : desc;
           PageUtils.toVideoPage(
@@ -204,13 +221,14 @@ class MemberVideoCtr
               'oid': IdUtils.bv2av(element.bvid!),
               'favTitle':
                   '$username: ${title ?? episodicButton.text ?? '播放全部'}',
-              if (seriesId == null) 'count': ?count,
+              if (seriesId == null) 'count': count.value,
               if (seasonId != null || seriesId != null)
                 'mediaType': Uri.parse(
                   episodicButton.uri!,
                 ).queryParameters['page_type'],
               'desc': desc,
-              if (isVideo) 'sortField': order == .click ? 2 : 1,
+              if (type == ContributeType.video)
+                'sortField': order.value == 'click' ? 2 : 1,
             },
           );
           break;

@@ -78,7 +78,7 @@ jobs:
         id: flutter-action
         with:
           channel: stable
-          flutter-version: "3.41.4"
+          flutter-version: "3.41.6"
           cache: true
 
       - name: apply bottom sheet patch

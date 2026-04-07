@@ -70,11 +70,6 @@ class _DynamicDetailPageState extends CommonDynPageState<DynamicDetailPage> {
               )
             : _buildBody(theme),
       ),
-      floatingActionButtonLocation: floatingActionButtonLocation,
-      floatingActionButton: SlideTransition(
-        position: fabAnimation,
-        child: _buildBottom(theme),
-      ),
     );
   }
 
@@ -324,69 +319,33 @@ class _DynamicDetailPageState extends CommonDynPageState<DynamicDetailPage> {
         ],
       );
     }
-    return child;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        child,
+        _buildBottom(theme),
+      ],
+    );
   }
 
   Widget _buildBottom(ThemeData theme) {
-    if (!controller.showDynActionBar) {
-      return fabButton;
-    }
-
-    final primary = theme.colorScheme.primary;
-    final outline = theme.colorScheme.outline;
-    final btnStyle = TextButton.styleFrom(
-      tapTargetSize: .padded,
-      padding: const EdgeInsets.symmetric(horizontal: 15),
-      foregroundColor: outline,
-    );
-
-    Widget textIconButton({
-      required IconData icon,
-      required String text,
-      required DynamicStat? stat,
-      required ValueChanged<Color> onPressed,
-      IconData? activatedIcon,
-    }) {
-      final status = stat?.status == true;
-      final color = status ? primary : outline;
-      final iconWidget = Icon(
-        status ? activatedIcon : icon,
-        size: 16,
-        color: color,
-      );
-      return TextButton.icon(
-        onPressed: () => onPressed(iconWidget.color!),
-        icon: iconWidget,
-        style: btnStyle,
-        label: Text(
-          stat?.count != null ? NumUtils.numFormat(stat!.count) : text,
-          style: TextStyle(color: color),
-        ),
-      );
-    }
-
-    final moduleStat = controller.dynItem.modules.moduleStat;
-    return Padding(
-      padding: .only(left: padding.left, right: padding.right),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(
-              right: kFloatingActionButtonMargin,
-              bottom: kFloatingActionButtonMargin,
-            ),
-            child: replyButton,
-          ),
-          Container(
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              border: Border(
-                top: BorderSide(
-                  color: theme.colorScheme.outline.withValues(
-                    alpha: 0.08,
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: 0,
+      child: SlideTransition(
+        position: fabAnimation,
+        child: Builder(
+          builder: (context) {
+            if (!controller.showDynActionBar) {
+              return Align(
+                alignment: Alignment.bottomRight,
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    right: kFloatingActionButtonMargin,
+                    bottom: padding.bottom + kFloatingActionButtonMargin,
                   ),
+                  child: replyButton,
                 ),
               );
             }
@@ -509,9 +468,9 @@ class _DynamicDetailPageState extends CommonDynPageState<DynamicDetailPage> {
                   ),
                 ),
               ],
-            ),
-          ),
-        ],
+            );
+          },
+        ),
       ),
     );
   }
