@@ -10,10 +10,16 @@ try {
     $commitHash = (git rev-parse HEAD).Trim()
 
     $updatedContent = foreach ($line in (Get-Content -Path 'pubspec.yaml' -Encoding UTF8)) {
-        if ($line -match '^\s*version:\s*([\d\.]+)') {
-            $versionName = $matches[1]
+        if ($line -match '^\s*version:\s*([0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?)(?:\+[0-9]+)?') {
+            $baseVersionName = $matches[1]
+            $versionName = $baseVersionName
             if ($Arg -eq 'android') {
-                $versionName += '-' + $commitHash.Substring(0, 9)
+                if ($baseVersionName -match '-') {
+                    $versionName = "$baseVersionName.$($commitHash.Substring(0, 9))"
+                }
+                else {
+                    $versionName = "$baseVersionName-$($commitHash.Substring(0, 9))"
+                }
             }
             "version: $versionName+$versionCode"
         }
