@@ -880,11 +880,17 @@ class UserInfoCard extends StatelessWidget {
         ),
     ];
     if (children.isNotEmpty) {
+      Widget child;
+      if (children.length == 1) {
+        child = children.first;
+      } else {
+        child = isPortrait
+            ? Row(mainAxisAlignment: .spaceBetween, children: children)
+            : Wrap(spacing: 10, runSpacing: 6, children: children);
+      }
       return Padding(
         padding: const .only(left: 20, right: 20, top: 6),
-        child: isPortrait
-            ? Row(mainAxisAlignment: .spaceBetween, children: children)
-            : Wrap(spacing: 10, runSpacing: 6, children: children),
+        child: child,
       );
     }
     return null;
@@ -1042,18 +1048,19 @@ class _HeaderTitleState extends State<HeaderTitle> {
             overflow: .ellipsis,
             style: const TextStyle(fontSize: 12, color: Colors.white),
           ),
-          Text(
-            title.subTitle!,
-            style: TextStyle(
-              fontSize: 12,
-              fontFamily: Assets.digitalNum,
-              color: title.subTitleColorFormat?.colors?.isNotEmpty == true
-                  ? Utils.parseMedalColor(
-                      title.subTitleColorFormat!.colors!.last,
-                    )
-                  : Colors.white,
+          if (title.subTitle?.isNotEmpty ?? false)
+            Text(
+              title.subTitle!,
+              style: TextStyle(
+                fontSize: 12,
+                fontFamily: Assets.digitalNum,
+                color: title.subTitleColorFormat?.colors?.isNotEmpty == true
+                    ? Utils.parseMedalColor(
+                        title.subTitleColorFormat!.colors!.last,
+                      )
+                    : Colors.white,
+              ),
             ),
-          ),
         ],
       );
     } catch (e, s) {
