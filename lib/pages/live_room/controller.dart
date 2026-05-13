@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:PiliPlus/common/widgets/dialog/report.dart';
 import 'package:PiliPlus/common/widgets/flutter/text_field/controller.dart';
@@ -26,6 +27,7 @@ import 'package:PiliPlus/plugin/pl_player/utils/danmaku_options.dart';
 import 'package:PiliPlus/services/service_locator.dart';
 import 'package:PiliPlus/tcp/live.dart';
 import 'package:PiliPlus/utils/accounts.dart';
+import 'package:PiliPlus/utils/connectivity_utils.dart';
 import 'package:PiliPlus/utils/danmaku_utils.dart';
 import 'package:PiliPlus/utils/duration_utils.dart';
 import 'package:PiliPlus/utils/extension/iterable_ext.dart';
@@ -33,11 +35,12 @@ import 'package:PiliPlus/utils/global_data.dart';
 import 'package:PiliPlus/utils/num_utils.dart';
 import 'package:PiliPlus/utils/platform_utils.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
+import 'package:PiliPlus/utils/theme_utils.dart';
 import 'package:PiliPlus/utils/utils.dart';
 import 'package:PiliPlus/utils/video_utils.dart';
 import 'package:canvas_danmaku/canvas_danmaku.dart';
 import 'package:easy_debounce/easy_throttle.dart';
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart' show kDebugMode, kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
@@ -49,14 +52,14 @@ class LiveRoomController extends GetxController {
   int roomId = Get.arguments;
   int? ruid;
   DanmakuController<DanmakuExtra>? danmakuController;
-  PlPlayerController plPlayerController = PlPlayerController.getInstance(
+  final plPlayerController = PlPlayerController.getInstance(
     isLive: true,
   );
 
-  RxBool isLoaded = false.obs;
-  Rx<RoomInfoH5Data?> roomInfoH5 = Rx<RoomInfoH5Data?>(null);
+  final isLoaded = false.obs;
+  final roomInfoH5 = Rxn<RoomInfoH5Data>();
 
-  Rx<int?> liveTime = Rx<int?>(null);
+  final liveTime = Rxn<int>();
   Timer? liveTimeTimer;
 
   void startLiveTimer() {
@@ -98,10 +101,12 @@ class LiveRoomController extends GetxController {
   // dm
   LiveDmInfoData? dmInfo;
   List<RichTextItem>? savedDanmaku;
-  RxList<dynamic> messages = <dynamic>[].obs;
-  late final Rx<SuperChatItem?> fsSC = Rx<SuperChatItem?>(null);
+  int builtLength = 0;
+  final messages = <dynamic>[].obs;
+  bool get shouldRefresh => builtLength != messages.length;
+  late final fsSC = Rxn<SuperChatItem>();
   late final RxList<SuperChatItem> superChatMsg = <SuperChatItem>[].obs;
-  RxBool disableAutoScroll = false.obs;
+  final disableAutoScroll = false.obs;
   bool autoScroll = true;
   LiveMessageStream? _msgStream;
   late final ScrollController scrollController;
@@ -109,7 +114,7 @@ class LiveRoomController extends GetxController {
   PageController? pageController;
 
   int? currentQn = PlatformUtils.isMobile ? null : Pref.liveQuality;
-  RxString currentQnDesc = ''.obs;
+  final currentQnDesc = ''.obs;
   final RxBool isPortrait = false.obs;
   late List<({int code, String desc})> acceptQnList = [];
 
@@ -177,7 +182,7 @@ class LiveRoomController extends GetxController {
   }
 
   Future<void> queryLiveUrl({bool autoFullScreenFlag = false}) async {
-    currentQn ??= await Utils.isWiFi
+    currentQn ??= await ConnectivityUtils.isWiFi
         ? Pref.liveQuality
         : Pref.liveQualityCellular;
     final res = await LiveHttp.liveRoomInfo(
@@ -244,7 +249,7 @@ class LiveRoomController extends GetxController {
             onPressed: Get.back,
             child: Text(
               '关闭',
-              style: TextStyle(color: Get.theme.colorScheme.outline),
+              style: TextStyle(color: ThemeUtils.theme.colorScheme.outline),
             ),
           ),
           TextButton(
@@ -283,7 +288,17 @@ class LiveRoomController extends GetxController {
     }
   }
 
-  void jumpToBottom() {
+  void handleJumpToBottom() {
+    disableAutoScroll.value = false;
+    if (shouldRefresh) {
+      messages.refresh();
+      WidgetsBinding.instance.addPostFrameCallback(_jumpToBottom);
+    } else {
+      _jumpToBottom();
+    }
+  }
+
+  void _jumpToBottom([_]) {
     if (scrollController.hasClients) {
       scrollController.jumpTo(scrollController.position.maxScrollExtent);
     }
@@ -347,9 +362,18 @@ class LiveRoomController extends GetxController {
       disableAutoScroll.value = true;
     } else if (userScrollDirection == .reverse) {
       final pos = scrollController.position;
-      if (pos.maxScrollExtent - pos.pixels <= 100) {
+      if (pos.maxScrollExtent - pos.pixels <= 100 && disableAutoScroll.value) {
         disableAutoScroll.value = false;
+        refreshMsgIfNeeded();
       }
+    }
+  }
+
+  void refreshMsgIfNeeded() {
+    if (shouldRefresh) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        messages.refresh();
+      });
     }
   }
 
@@ -480,9 +504,13 @@ class LiveRoomController extends GetxController {
         case 'SUPER_CHAT_MESSAGE' when showSuperChat:
           final item = SuperChatItem.fromJson(obj['data']);
           superChatMsg.insert(0, item);
-          if (isFullScreen || plPlayerController.isDesktopPip) {
+          if (plPlayerController.showDanmaku &&
+              (isFullScreen || plPlayerController.isDesktopPip)) {
             fsSC.value = item.copyWith(
-              endTime: DateTime.now().millisecondsSinceEpoch ~/ 1000 + 10,
+              endTime: math.min(
+                item.endTime,
+                DateTime.now().millisecondsSinceEpoch ~/ 1000 + 10,
+              ),
             );
           }
           addDm(item);
@@ -565,12 +593,13 @@ class LiveRoomController extends GetxController {
   }
 
   void onSendDanmaku([bool fromEmote = false]) {
-    if (!isLogin) {
+    if (kReleaseMode && !isLogin) {
       SmartDialog.showToast('账号未登录');
       return;
     }
     Get.key.currentState!.push(
       PublishRoute(
+        barrierColor: Colors.transparent,
         pageBuilder: (context, animation, secondaryAnimation) {
           return LiveSendDmPanel(
             fromEmote: fromEmote,

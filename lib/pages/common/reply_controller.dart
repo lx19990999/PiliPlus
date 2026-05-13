@@ -20,7 +20,7 @@ abstract class ReplyController<R> extends CommonListController<R, ReplyInfo> {
   final RxInt count = (-1).obs;
 
   late final Rx<ReplySortType> sortType;
-  late final Rx<Mode> mode;
+  late Mode mode;
   final RxBool showImageOnly = false.obs; // 是否只显示图片/笔记评论
 
   final savedReplies = <Object, List<RichTextItem>?>{};
@@ -46,8 +46,7 @@ abstract class ReplyController<R> extends CommonListController<R, ReplyInfo> {
     super.onInit();
     final cacheSortType = Pref.replySortType;
     sortType = cacheSortType.obs;
-    mode =
-        (cacheSortType == .time ? Mode.MAIN_LIST_TIME : Mode.MAIN_LIST_HOT).obs;
+    mode = cacheSortType == .time ? Mode.MAIN_LIST_TIME : Mode.MAIN_LIST_HOT;
   }
 
   @override
@@ -108,11 +107,11 @@ abstract class ReplyController<R> extends CommonListController<R, ReplyInfo> {
     switch (sortType.value) {
       case ReplySortType.time:
         sortType.value = ReplySortType.hot;
-        mode.value = Mode.MAIN_LIST_HOT;
+        mode = Mode.MAIN_LIST_HOT;
         break;
       case ReplySortType.hot:
         sortType.value = ReplySortType.time;
-        mode.value = Mode.MAIN_LIST_TIME;
+        mode = Mode.MAIN_LIST_TIME;
         break;
       case ReplySortType.select:
         return;

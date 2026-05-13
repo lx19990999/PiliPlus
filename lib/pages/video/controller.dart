@@ -13,7 +13,6 @@ import 'package:PiliPlus/http/init.dart';
 import 'package:PiliPlus/http/loading_state.dart';
 import 'package:PiliPlus/http/user.dart';
 import 'package:PiliPlus/http/video.dart';
-import 'package:PiliPlus/main.dart';
 import 'package:PiliPlus/models/common/account_type.dart';
 import 'package:PiliPlus/models/common/sponsor_block/action_type.dart';
 import 'package:PiliPlus/models/common/sponsor_block/post_segment_model.dart';
@@ -53,6 +52,7 @@ import 'package:PiliPlus/plugin/pl_player/models/heart_beat_type.dart';
 import 'package:PiliPlus/plugin/pl_player/models/play_status.dart';
 import 'package:PiliPlus/services/download/download_service.dart';
 import 'package:PiliPlus/utils/accounts.dart';
+import 'package:PiliPlus/utils/connectivity_utils.dart';
 import 'package:PiliPlus/utils/extension/context_ext.dart';
 import 'package:PiliPlus/utils/extension/file_ext.dart';
 import 'package:PiliPlus/utils/extension/iterable_ext.dart';
@@ -63,6 +63,7 @@ import 'package:PiliPlus/utils/path_utils.dart';
 import 'package:PiliPlus/utils/platform_utils.dart';
 import 'package:PiliPlus/utils/storage.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
+import 'package:PiliPlus/utils/theme_utils.dart';
 import 'package:PiliPlus/utils/utils.dart';
 import 'package:PiliPlus/utils/video_utils.dart';
 import 'package:extended_nested_scroll_view/extended_nested_scroll_view.dart';
@@ -125,6 +126,7 @@ class VideoDetailController extends GetxController
     ..brightness.value = -1;
   bool get setSystemBrightness => plPlayerController.setSystemBrightness;
   bool get removeSafeArea => plPlayerController.removeSafeArea;
+  double get uiScale => plPlayerController.uiScale;
 
   late VideoItem firstVideo;
   String? videoUrl;
@@ -247,13 +249,15 @@ class VideoDetailController extends GetxController
       if (width == null || height == null) {
         if (isUgc && !isFileSource) {
           final ugcIntroCtr = Get.find<UgcIntroController>(tag: heroTag);
-          final data = ugcIntroCtr.videoDetail.value;
-          if (data.cid == cid.value) {
-            final dimension = data.dimension!;
+          final cid = this.cid.value;
+          final part = ugcIntroCtr.videoDetail.value.pages?.firstWhereOrNull(
+            (e) => e.cid == cid,
+          );
+          if (part != null) {
+            final dimension = part.dimension!;
             width = dimension.width!;
             height = dimension.height!;
           } else {
-            ugcIntroCtr.queryVideoIntro().whenComplete(_setVideoHeight);
             return;
           }
         } else {
@@ -263,7 +267,10 @@ class VideoDetailController extends GetxController
       final isVertical = height > width;
       if (_scrollCtr?.hasClients != true) {
         videoHeight = isVertical ? maxVideoHeight : minVideoHeight;
-        this.isVertical.value = isVertical;
+        if (this.isVertical.value != isVertical) {
+          this.isVertical.value = isVertical;
+          _needAnimOnDimensionChanged(isVertical);
+        }
         return;
       }
       if (this.isVertical.value != isVertical) {
@@ -285,11 +292,11 @@ class VideoDetailController extends GetxController
                 .toPrecision(2);
             double minVideoHeightPrecise = minVideoHeight.toPrecision(2);
             if (currentHeight == minVideoHeightPrecise) {
+              this.videoHeight = minVideoHeight;
               if (_needAnimOnDimensionChanged(isVertical)) {
                 isExpanding = true;
-                this.videoHeight = minVideoHeight;
+                animationController.forward(from: 1);
               }
-              animationController.forward(from: 1);
             } else if (currentHeight < minVideoHeightPrecise) {
               // expand
               if (_needAnimOnDimensionChanged(isVertical)) {
@@ -523,11 +530,8 @@ class VideoDetailController extends GetxController
       if (plPlayerController.isFullScreen.value || showVideoSheet) {
         PageUtils.showVideoBottomSheet(
           context,
-          child: plPlayerController.darkVideoPage && MyApp.darkThemeData != null
-              ? Theme(
-                  data: MyApp.darkThemeData!,
-                  child: panel(),
-                )
+          child: plPlayerController.darkVideoPage
+              ? Theme(data: ThemeUtils.darkTheme, child: panel())
               : panel(),
           isFullScreen: () => plPlayerController.isFullScreen.value,
         );
@@ -574,7 +578,7 @@ class VideoDetailController extends GetxController
 
   @override
   Widget buildItem(Object item, Animation<double> animation) {
-    final theme = Get.theme;
+    final theme = ThemeUtils.theme;
     return Align(
       alignment: Alignment.centerLeft,
       child: SlideTransition(
@@ -807,8 +811,8 @@ class VideoDetailController extends GetxController
 
   bool isQuerying = false;
 
-  final Rx<List<LanguageItem>?> languages = Rx<List<LanguageItem>?>(null);
-  final Rx<String?> currLang = Rx<String?>(null);
+  final languages = Rxn<List<LanguageItem>>();
+  final currLang = Rxn<String>();
   void setLanguage(String language) {
     if (currLang.value == language) return;
     if (!isLoginVideo) {
@@ -838,7 +842,7 @@ class VideoDetailController extends GetxController
       querySponsorBlock(bvid: bvid, cid: cid.value);
     }
     if (plPlayerController.cacheVideoQa == null) {
-      final isWiFi = await Utils.isWiFi;
+      final isWiFi = await ConnectivityUtils.isWiFi;
       plPlayerController
         ..cacheVideoQa = isWiFi
             ? Pref.defaultVideoQa
@@ -856,6 +860,7 @@ class VideoDetailController extends GetxController
       tryLook: plPlayerController.tryLook,
       videoType: _actualVideoType ?? videoType,
       language: currLang.value,
+      voiceBalance: plPlayerController.enableAudioNormalization,
     );
 
     if (result case Success(:final response)) {
@@ -1030,9 +1035,9 @@ class VideoDetailController extends GetxController
     if (plPlayerController.isFullScreen.value || showVideoSheet) {
       PageUtils.showVideoBottomSheet(
         context,
-        child: plPlayerController.darkVideoPage && MyApp.darkThemeData != null
+        child: plPlayerController.darkVideoPage
             ? Theme(
-                data: MyApp.darkThemeData!,
+                data: ThemeUtils.darkTheme,
                 child: PostPanel(
                   enableSlide: false,
                   videoDetailController: this,
@@ -1369,9 +1374,9 @@ class VideoDetailController extends GetxController
     if (plPlayerController.isFullScreen.value || showVideoSheet) {
       PageUtils.showVideoBottomSheet(
         context,
-        child: plPlayerController.darkVideoPage && MyApp.darkThemeData != null
+        child: plPlayerController.darkVideoPage
             ? Theme(
-                data: MyApp.darkThemeData!,
+                data: ThemeUtils.darkTheme,
                 child: NoteListPage(
                   oid: aid,
                   enableSlide: false,

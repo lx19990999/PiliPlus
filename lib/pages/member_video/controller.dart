@@ -14,6 +14,7 @@ import 'package:PiliPlus/models_new/space/space_archive/item.dart';
 import 'package:PiliPlus/models_new/video/video_detail/page.dart';
 import 'package:PiliPlus/pages/common/common_list_controller.dart';
 import 'package:PiliPlus/services/download/download_service.dart';
+import 'package:PiliPlus/utils/extension/dimension_ext.dart';
 import 'package:PiliPlus/utils/extension/iterable_ext.dart';
 import 'package:PiliPlus/utils/id_utils.dart';
 import 'package:PiliPlus/utils/page_utils.dart';
@@ -210,11 +211,16 @@ class MemberVideoCtr
                       : sort.value == 'asc')
               ? !desc
               : desc;
+          bool isVertical = false;
+          if (element.uri case final uri?) {
+            isVertical = uri.isVerticalFromUri;
+          }
           PageUtils.toVideoPage(
             bvid: element.bvid,
             cid: element.cid!,
             cover: element.cover,
             title: element.title,
+            isVertical: isVertical,
             extraArguments: {
               'sourceType': SourceType.archive,
               'mediaId': seasonId ?? seriesId ?? mid,
