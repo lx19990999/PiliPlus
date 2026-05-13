@@ -488,19 +488,12 @@ class ReplyItemGrpc extends StatelessWidget {
               feedBack();
               onReply?.call(replyItem);
             },
-            child: Row(
-              spacing: 3,
-              mainAxisSize: .min,
-              children: [
-                Icon(
-                  Icons.reply,
-                  size: 18,
-                  color: replyItem.replyControl.upLike
-                      ? theme.colorScheme.error
-                      : theme.colorScheme.outline.withValues(alpha: 0.8),
-                ),
-                Text('回复', style: textStyle),
-              ],
+            child: Icon(
+              Icons.reply,
+              size: 18,
+              color: replyItem.replyControl.upLike
+                  ? theme.colorScheme.error
+                  : theme.colorScheme.outline.withValues(alpha: 0.8),
             ),
           ),
         ),
@@ -513,14 +506,6 @@ class ReplyItemGrpc extends StatelessWidget {
             replyControl,
             textStyle,
             buttonStyle,
-          ),
-          const SizedBox(width: 2),
-        ] else if (replyControl.cardLabels.isNotEmpty) ...[
-          Text(
-            dialogBtn != null
-                ? replyControl.cardLabels.first.textContent
-                : replyControl.cardLabels.map((e) => e.textContent).join('  '),
-            style: textStyle.copyWith(color: theme.colorScheme.secondary),
           ),
           const SizedBox(width: 2),
         ],
