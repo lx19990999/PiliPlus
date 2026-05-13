@@ -477,43 +477,47 @@ class ReplyItemGrpc extends StatelessWidget {
         ),
       );
     }
-    return Row(
-      children: [
-        const SizedBox(width: 36),
-        SizedBox(
-          height: 32,
-          child: TextButton(
-            style: buttonStyle,
-            onPressed: () {
-              feedBack();
-              onReply?.call(replyItem);
-            },
-            child: Icon(
-              Icons.reply,
-              size: 18,
-              color: replyItem.replyControl.upLike
-                  ? theme.colorScheme.error
-                  : theme.colorScheme.outline.withValues(alpha: 0.8),
+    // 与楼中楼 Material 的 left: 42 对齐；子楼层与正文 left: 45 一致
+    final double actionLeading = replyLevel == 1 ? 42 : 45;
+    return Padding(
+      padding: EdgeInsets.only(left: actionLeading),
+      child: Row(
+        children: [
+          SizedBox(
+            height: 32,
+            child: TextButton(
+              style: buttonStyle,
+              onPressed: () {
+                feedBack();
+                onReply?.call(replyItem);
+              },
+              child: Icon(
+                Icons.reply,
+                size: 18,
+                color: replyItem.replyControl.upLike
+                    ? theme.colorScheme.error
+                    : theme.colorScheme.outline.withValues(alpha: 0.8),
+              ),
             ),
           ),
-        ),
-        const SizedBox(width: 2),
-        if (replyControl.translationSwitch ==
-            .TRANSLATION_SWITCH_SHOW_TRANSLATION) ...[
-          _buildTranslateBtn(
-            context,
-            theme,
-            replyControl,
-            textStyle,
-            buttonStyle,
-          ),
+          const SizedBox(width: 6),
+          ZanButtonGrpc(replyItem: replyItem),
           const SizedBox(width: 2),
+          if (replyControl.translationSwitch ==
+              .TRANSLATION_SWITCH_SHOW_TRANSLATION) ...[
+            _buildTranslateBtn(
+              context,
+              theme,
+              replyControl,
+              textStyle,
+              buttonStyle,
+            ),
+            const SizedBox(width: 2),
+          ],
+          ?dialogBtn,
+          const Spacer(),
         ],
-        ?dialogBtn,
-        const Spacer(),
-        ZanButtonGrpc(replyItem: replyItem),
-        const SizedBox(width: 5),
-      ],
+      ),
     );
   }
 
